@@ -96,6 +96,7 @@ properties.traffic_signal_penalty        = 2
 properties.use_turn_restrictions         = false
 properties.u_turn_penalty                = 20
 properties.continue_straight_at_waypoint = false
+properties.weight_name                   = 'duration'
 
 local obey_oneway               = true
 local ignore_areas              = true
@@ -372,10 +373,13 @@ function way_function (way, result)
   -- cycleways
   if cycleway and cycleway_tags[cycleway] then
     result.forward_speed = bicycle_speeds["cycleway"]
+    result.backward_speed = bicycle_speeds["cycleway"]
   elseif cycleway_left and cycleway_tags[cycleway_left] then
     result.forward_speed = bicycle_speeds["cycleway"]
+    result.backward_speed = bicycle_speeds["cycleway"]
   elseif cycleway_right and cycleway_tags[cycleway_right] then
     result.forward_speed = bicycle_speeds["cycleway"]
+    result.backward_speed = bicycle_speeds["cycleway"]
   end
 
   -- dismount
@@ -399,6 +403,11 @@ function way_function (way, result)
 
   -- maxspeed
   limit( result, maxspeed, maxspeed_forward, maxspeed_backward )
+
+  -- we use the speed as metric
+  result.forward_weight_per_meter = result.forward_speed / 3.6
+  result.backward_weight_per_meter = result.backward_speed / 3.6
+  result.weight = result.duration
 end
 
 function turn_function (angle)

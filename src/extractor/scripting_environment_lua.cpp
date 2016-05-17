@@ -130,6 +130,9 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
              .property("u_turn_penalty",
                        &ProfileProperties::GetUturnPenalty,
                        &ProfileProperties::SetUturnPenalty)
+             .property("weight_name",
+                       &ProfileProperties::GetWeightName,
+                       &ProfileProperties::SetWeightName)
              .def_readwrite("use_turn_restrictions", &ProfileProperties::use_turn_restrictions)
              .def_readwrite("continue_straight_at_waypoint",
                             &ProfileProperties::continue_straight_at_waypoint)
@@ -174,6 +177,8 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
              // .def(luabind::constructor<>())
              .def_readwrite("forward_speed", &ExtractionWay::forward_speed)
              .def_readwrite("backward_speed", &ExtractionWay::backward_speed)
+             .def_readwrite("forward_weight_per_meter", &ExtractionWay::forward_weight_per_meter)
+             .def_readwrite("backward_weight_per_meter", &ExtractionWay::backward_weight_per_meter)
              .def_readwrite("name", &ExtractionWay::name)
              .def_readwrite("ref", &ExtractionWay::ref)
              .def_readwrite("pronunciation", &ExtractionWay::pronunciation)
@@ -185,6 +190,7 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
              .def_readwrite("turn_lanes_forward", &ExtractionWay::turn_lanes_forward)
              .def_readwrite("turn_lanes_backward", &ExtractionWay::turn_lanes_backward)
              .def_readwrite("road_classification", &ExtractionWay::road_classification)
+             .def_readwrite("weight", &ExtractionWay::weight)
              .property(
                  "forward_mode", &ExtractionWay::get_forward_mode, &ExtractionWay::set_forward_mode)
              .property("backward_mode",
@@ -203,14 +209,6 @@ void LuaScriptingEnvironment::InitContext(LuaScriptingContext &context)
              .def("get_value_by_key", &get_value_by_key<osmium::Way>)
              .def("id", &osmium::Way::id)
              .def("get_nodes", get_nodes_for_way, luabind::return_stl_iterator),
-         luabind::class_<InternalExtractorEdge>("EdgeSource")
-             .def_readonly("source_coordinate", &InternalExtractorEdge::source_coordinate)
-             .def_readwrite("weight_data", &InternalExtractorEdge::weight_data),
-         luabind::class_<InternalExtractorEdge::WeightData>("WeightData")
-             .def_readwrite("speed", &InternalExtractorEdge::WeightData::speed),
-         luabind::class_<ExternalMemoryNode>("EdgeTarget")
-             .property("lon", &lonToDouble<ExternalMemoryNode>)
-             .property("lat", &latToDouble<ExternalMemoryNode>),
          luabind::class_<util::Coordinate>("Coordinate")
              .property("lon", &lonToDouble<util::Coordinate>)
              .property("lat", &latToDouble<util::Coordinate>),
@@ -373,22 +371,23 @@ int32_t LuaScriptingEnvironment::GetTurnPenalty(const double angle)
     return 0;
 }
 
-void LuaScriptingEnvironment::ProcessSegment(const osrm::util::Coordinate &source,
-                                             const osrm::util::Coordinate &target,
-                                             double distance,
-                                             InternalExtractorEdge::WeightData &weight)
+double LuaScriptingEnvironment::ProcessSegment(const osrm::util::Coordinate &source,
+                                               const osrm::util::Coordinate &target,
+                                               double distance,
+                                               double weight)
 {
     auto &context = GetLuaContext();
     if (context.has_segment_function)
     {
         BOOST_ASSERT(context.state != nullptr);
-        luabind::call_function<void>(context.state,
-                                     "segment_function",
-                                     boost::cref(source),
-                                     boost::cref(target),
-                                     distance,
-                                     boost::ref(weight));
+        weight = luabind::call_function<double>(context.state,
+                                                "segment_function",
+                                                boost::cref(source),
+                                                boost::cref(target),
+                                                distance,
+                                                weight);
     }
+    return weight;
 }
 
 void LuaScriptingContext::processNode(const osmium::Node &node, ExtractionNode &result)

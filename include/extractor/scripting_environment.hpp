@@ -54,10 +54,10 @@ class ScriptingEnvironment
     virtual std::vector<std::string> GetRestrictions() = 0;
     virtual void SetupSources() = 0;
     virtual int32_t GetTurnPenalty(double angle) = 0;
-    virtual void ProcessSegment(const osrm::util::Coordinate &source,
-                                const osrm::util::Coordinate &target,
-                                double distance,
-                                InternalExtractorEdge::WeightData &weight) = 0;
+    virtual double ProcessSegment(const osrm::util::Coordinate &source,
+                                  const osrm::util::Coordinate &target,
+                                  double distance,
+                                  double weight) = 0;
     virtual void
     ProcessElements(const std::vector<osmium::memory::Buffer::const_iterator> &osm_elements,
                     const RestrictionParser &restriction_parser,

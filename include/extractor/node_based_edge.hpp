@@ -48,6 +48,7 @@ struct NodeBasedEdge
 
 struct NodeBasedEdgeWithOSM : NodeBasedEdge
 {
+    NodeBasedEdgeWithOSM() = default;
     NodeBasedEdgeWithOSM(OSMNodeID source,
                          OSMNodeID target,
                          NodeID name_id,
