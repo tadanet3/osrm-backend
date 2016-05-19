@@ -163,7 +163,7 @@ operator()(const NodeID, const EdgeID source_edge_id, Intersection intersection)
 
     // Threshold check, if the intersection is too far away, don't bother continuing
     const auto &next_road_data = node_based_graph.GetEdgeData(next_road.turn.eid);
-    if (next_road_data.distance > MAX_SLIPROAD_THRESHOLD)
+    if (next_road_data.weight > MAX_SLIPROAD_THRESHOLD)
     {
         return intersection;
     }

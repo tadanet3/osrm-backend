@@ -548,11 +548,11 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
         const bool distinct_to_left =
             left_deviation / best_deviation >= DISTINCTION_RATIO ||
             (left_deviation > best_deviation &&
-             (!intersection[left_index].entry_allowed && in_data.distance > 30));
+             (!intersection[left_index].entry_allowed && in_data.weight > 30));
         const bool distinct_to_right =
             right_deviation / best_deviation >= DISTINCTION_RATIO ||
             (right_deviation > best_deviation &&
-             (!intersection[right_index].entry_allowed && in_data.distance > 30));
+             (!intersection[right_index].entry_allowed && in_data.weight > 30));
 
         // Well distinct turn that is nearly straight
         if ((distinct_to_left || obvious_to_left) && (distinct_to_right || obvious_to_right))

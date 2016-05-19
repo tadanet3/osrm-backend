@@ -118,15 +118,6 @@ EdgeWeight getNewWeight(IterType speed_iter,
 
 int Contractor::Run()
 {
-#ifdef WIN32
-#pragma message("Memory consumption on Windows can be higher due to different bit packing")
-#else
-    static_assert(sizeof(extractor::NodeBasedEdge) == 24,
-                  "changing extractor::NodeBasedEdge type has influence on memory consumption!");
-    static_assert(sizeof(extractor::EdgeBasedEdge) == 16,
-                  "changing EdgeBasedEdge type has influence on memory consumption!");
-#endif
-
     if (config.core_factor > 1.0 || config.core_factor < 0)
     {
         throw util::exception("Core factor must be between 0.0 to 1.0 (inclusive)");

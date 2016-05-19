@@ -32,6 +32,10 @@ struct EdgeBasedEdge
     bool forward : 1;
     bool backward : 1;
 };
+static_assert(sizeof(extractor::EdgeBasedEdge) == 16,
+              "Size of extractor::EdgeBasedEdge type is "
+              "bigger than expected. This will influence "
+              "memory consumption.");
 
 // Impl.
 
