@@ -253,16 +253,19 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 facade->GetUncompressedGeometry(geometry_index, id_vector);
                 BOOST_ASSERT(id_vector.size() > 0);
 
-                std::vector<EdgeWeight> weight_vector;
-                facade->GetUncompressedWeights(geometry_index, weight_vector);
-                BOOST_ASSERT(weight_vector.size() > 0);
+                std::vector<EdgeWeight> duration_vector;
+                facade->GetUncompressedDurations(geometry_index, duration_vector);
+                BOOST_ASSERT(duration_vector.size() == id_vector.size());
 
                 std::vector<DatasourceID> datasource_vector;
                 facade->GetUncompressedDatasources(geometry_index, datasource_vector);
 
+                std::vector<EdgeWeight> weight_vector;
+                facade->GetUncompressedDurations(geometry_index, weight_vector);
+                BOOST_ASSERT(weight_vector.size() == id_vector.size());
+
                 const auto total_weight = std::accumulate(weight_vector.begin(), weight_vector.end(), 0);
 
-                BOOST_ASSERT(weight_vector.size() == id_vector.size());
                 const bool is_first_segment = unpacked_path.empty();
 
                 const std::size_t start_index =
@@ -281,7 +284,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                     unpacked_path.push_back(
                         PathData{id_vector[i],
                                  name_index,
-                                 weight_vector[i],
+                                 duration_vector[i],
                                  extractor::guidance::TurnInstruction::NO_TURN(),
                                  {{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                                  travel_mode,
@@ -294,6 +297,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
 
                 unpacked_path.back().entry_classid = facade->GetEntryClassID(edge_data.id);
                 unpacked_path.back().turn_instruction = turn_instruction;
+                // FIXME this needs to be replaced by a turn penalty lookup
                 unpacked_path.back().duration_until_turn += (edge_data.weight - total_weight);
             });
 

@@ -75,6 +75,12 @@ class MockDataFacade final : public engine::datafacade::BaseDataFacade
         result_weights.resize(1);
         result_weights[0] = 1;
     }
+    void GetUncompressedDurations(const EdgeID /* id */,
+                                  std::vector<EdgeWeight> &result_weights) const override
+    {
+        result_weights.resize(1);
+        result_weights[0] = 1;
+    }
     void GetUncompressedDatasources(const EdgeID /*id*/,
                                     std::vector<uint8_t> & /*data_sources*/) const override
     {
