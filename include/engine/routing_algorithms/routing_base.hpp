@@ -257,6 +257,10 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 facade->GetUncompressedDurations(geometry_index, duration_vector);
                 BOOST_ASSERT(duration_vector.size() == id_vector.size());
 
+                std::vector<EdgeWeight> weight_vector;
+                facade->GetUncompressedWeights(geometry_index, weight_vector);
+                BOOST_ASSERT(weight_vector.size() == id_vector.size());
+
                 std::vector<DatasourceID> datasource_vector;
                 facade->GetUncompressedDatasources(geometry_index, datasource_vector);
 
@@ -285,6 +289,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                         PathData{id_vector[i],
                                  name_index,
                                  duration_vector[i],
+                                 weight_vector[i],
                                  extractor::guidance::TurnInstruction::NO_TURN(),
                                  {{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                                  travel_mode,
@@ -304,6 +309,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
         std::size_t start_index = 0, end_index = 0;
         std::vector<unsigned> id_vector;
         std::vector<EdgeWeight> duration_vector;
+        std::vector<EdgeWeight> weight_vector;
         std::vector<DatasourceID> datasource_vector;
         const bool is_local_path = (phantom_node_pair.source_phantom.forward_packed_geometry_id ==
                                     phantom_node_pair.target_phantom.forward_packed_geometry_id) &&
@@ -316,6 +322,9 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
 
             facade->GetUncompressedDurations(
                 phantom_node_pair.target_phantom.reverse_packed_geometry_id, duration_vector);
+
+            facade->GetUncompressedWeights(
+                phantom_node_pair.target_phantom.reverse_packed_geometry_id, weight_vector);
 
             facade->GetUncompressedDatasources(
                 phantom_node_pair.target_phantom.reverse_packed_geometry_id, datasource_vector);
@@ -341,6 +350,9 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             facade->GetUncompressedDurations(
                 phantom_node_pair.target_phantom.forward_packed_geometry_id, duration_vector);
 
+            facade->GetUncompressedWeights(
+                phantom_node_pair.target_phantom.forward_packed_geometry_id, weight_vector);
+
             facade->GetUncompressedDatasources(
                 phantom_node_pair.target_phantom.forward_packed_geometry_id, datasource_vector);
         }
@@ -360,6 +372,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 id_vector[i],
                 phantom_node_pair.target_phantom.name_id,
                 duration_vector[i],
+                weight_vector[i],
                 extractor::guidance::TurnInstruction::NO_TURN(),
                 {{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                 target_traversed_in_reverse ? phantom_node_pair.target_phantom.backward_travel_mode
@@ -388,6 +401,8 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             // which is obviously incorrect and not ideal...
             unpacked_path.front().duration_until_turn =
                 std::max(unpacked_path.front().duration_until_turn - source_weight, 0);
+            unpacked_path.front().weight_until_turn =
+                std::max(unpacked_path.front().weight_until_turn - source_weight, 0);
         }
 
         // there is no equivalent to a node-based node in an edge-expanded graph.

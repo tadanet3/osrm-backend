@@ -43,6 +43,7 @@ class ExtractionContainers;
 struct InputRestrictionContainer;
 struct ExtractionNode;
 struct ExtractionWay;
+struct ProfileProperties;
 
 /**
  * This class is used by the extractor with the results of the
@@ -65,7 +66,7 @@ class ExtractorCallbacks
 
   public:
     explicit ExtractorCallbacks(ExtractionContainers &extraction_containers,
-                                bool fallback_to_duration);
+                                const ProfileProperties &properties);
 
     ExtractorCallbacks(const ExtractorCallbacks &) = delete;
     ExtractorCallbacks &operator=(const ExtractorCallbacks &) = delete;

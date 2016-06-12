@@ -19,6 +19,7 @@
 
 #include "osrm/coordinate.hpp"
 
+#include <cstring>
 #include <iterator>
 #include <limits>
 #include <string>
@@ -33,8 +34,9 @@ using TurnLaneDescription = guidance::TurnLaneDescription;
 namespace TurnLaneType = guidance::TurnLaneType;
 
 ExtractorCallbacks::ExtractorCallbacks(ExtractionContainers &extraction_containers_,
-                                       bool fallback_to_duration)
-    : external_memory(extraction_containers_), fallback_to_duration(fallback_to_duration)
+                                       const ProfileProperties &properties)
+    : external_memory(extraction_containers_),
+      fallback_to_duration(std::strcmp(properties.weight_name, "duration") == 0)
 {
     // we reserved 0, 1, 2, 3 for the empty case
     string_map[MapKey("", "", "", "")] = 0;
