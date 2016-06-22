@@ -19,7 +19,8 @@ speed_profile = {
 properties.continue_straight_at_waypoint = true
 properties.use_turn_restrictions         = true
 properties.traffic_signal_penalty        = 7     -- seconds
-properties.u_turn_penalty                = 20
+
+local uturn_penalty                      = 20
 
 function limit_speed(speed, limits)
   -- don't use ipairs(), since it stops at the first nil value
@@ -110,5 +111,12 @@ function way_function (way, result)
 
   if junction == 'roundabout' then
     result.roundabout = true
+  end
+end
+
+function turn_function (turn)
+  if turn.is_uturn then
+    turn.duration = uturn_penalty
+    turn.weight = uturn_penalty
   end
 end

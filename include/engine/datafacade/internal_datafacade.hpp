@@ -10,6 +10,7 @@
 #include "util/guidance/entry_class.hpp"
 
 #include "extractor/compressed_edge_container.hpp"
+#include "extractor/io.hpp"
 #include "extractor/original_edge_data.hpp"
 #include "extractor/profile_properties.hpp"
 #include "extractor/query_node.hpp"
@@ -86,6 +87,8 @@ class InternalDataFacade final : public BaseDataFacade
     util::ShM<unsigned, false>::vector m_geometry_indices;
     util::ShM<extractor::CompressedEdgeContainer::CompressedEdge, false>::vector m_geometry_list;
     util::ShM<bool, false>::vector m_is_core_node;
+    util::ShM<TurnPenalty, false>::vector m_turn_weight_penalties;
+    util::ShM<TurnPenalty, false>::vector m_turn_duration_penalties;
     util::ShM<uint8_t, false>::vector m_datasource_list;
     util::ShM<std::string, false>::vector m_datasource_names;
     util::ShM<std::uint32_t, false>::vector m_lane_description_offsets;
@@ -136,9 +139,24 @@ class InternalDataFacade final : public BaseDataFacade
                        sizeof(m_lane_tupel_id_pairs) * size);
     }
 
+    void LoadTurnPenalties(const boost::filesystem::path &turn_penalties_path,
+                           std::vector<TurnPenalty> &turn_penalties) const
+    {
+        boost::filesystem::ifstream turn_penalties_stream(turn_penalties_path);
+        if (!turn_penalties_stream)
+        {
+            throw util::exception("Could not open " + turn_penalties_path.string() +
+                                  " for reading.");
+        }
+        extractor::io::TurnPenaltiesHeader header;
+        turn_penalties_stream.read(reinterpret_cast<char *>(&header), sizeof(header));
+        turn_penalties.resize(header.number_of_penalties);
+        turn_penalties_stream.read(reinterpret_cast<char *>(turn_penalties.data()),
+                                   sizeof(TurnPenalty) * header.number_of_penalties);
+    }
+
     void LoadTimestamp(const boost::filesystem::path &timestamp_path)
     {
-        util::SimpleLogger().Write() << "Loading Timestamp";
         boost::filesystem::ifstream timestamp_stream(timestamp_path);
         if (!timestamp_stream)
         {
@@ -409,6 +427,10 @@ class InternalDataFacade final : public BaseDataFacade
         util::SimpleLogger().Write() << "loading timestamp";
         LoadTimestamp(config.timestamp_path);
 
+        util::SimpleLogger().Write() << "loading turn penalties";
+        LoadTurnPenalties(config.turn_weight_penalties_path, m_turn_weight_penalties);
+        LoadTurnPenalties(config.turn_duration_penalties_path, m_turn_duration_penalties);
+
         util::SimpleLogger().Write() << "loading profile properties";
         LoadProfileProperties(config.properties_path);
 
@@ -671,7 +693,28 @@ class InternalDataFacade final : public BaseDataFacade
 
     virtual unsigned GetGeometryIndexForEdgeID(const unsigned id) const override final
     {
-        return m_via_node_list.at(id);
+        BOOST_ASSERT(m_via_node_list.size() > id);
+        return m_via_node_list[id];
+    }
+
+    virtual TurnPenalty GetWeightPenaltyForEdgeID(const unsigned id) const override final
+    {
+        BOOST_ASSERT(m_turn_weight_penalties.size() > id);
+        return m_turn_weight_penalties[id];
+    }
+
+    virtual TurnPenalty GetDurationPenaltyForEdgeID(const unsigned id) const override final
+    {
+        if (m_turn_duration_penalties.empty())
+        {
+            // MKR: fallback to weight penalties
+            // "Only load the duration vector if weight doesn't
+            //   contain the same values (safes memory consumption)"
+            return GetWeightPenaltyForEdgeID(id);
+        }
+
+        BOOST_ASSERT(m_turn_duration_penalties.size() > id);
+        return m_turn_duration_penalties[id];
     }
 
     virtual std::size_t GetCoreSize() const override final { return m_is_core_node.size(); }

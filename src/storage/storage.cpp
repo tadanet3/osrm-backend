@@ -2,6 +2,7 @@
 #include "contractor/query_edge.hpp"
 #include "extractor/compressed_edge_container.hpp"
 #include "extractor/guidance/turn_instruction.hpp"
+#include "extractor/io.hpp"
 #include "extractor/original_edge_data.hpp"
 #include "extractor/profile_properties.hpp"
 #include "extractor/query_node.hpp"
@@ -248,6 +249,33 @@ int Storage::Run()
     core_marker_file.read((char *)&number_of_core_markers, sizeof(uint32_t));
     shared_layout_ptr->SetBlockSize<unsigned>(SharedDataLayout::CORE_MARKER,
                                               number_of_core_markers);
+
+    // load turn penalties
+    boost::filesystem::ifstream turn_weight_penalties_file(config.turn_weight_penalties_path);
+    if (!turn_weight_penalties_file)
+    {
+        throw util::exception("Could not open " + config.turn_weight_penalties_path.string() +
+                              " for reading.");
+    }
+    extractor::io::TurnPenaltiesHeader turn_weight_penalties_header;
+    turn_weight_penalties_file.read(reinterpret_cast<char *>(&turn_weight_penalties_header),
+                                    sizeof(turn_weight_penalties_header));
+    shared_layout_ptr->SetBlockSize<TurnPenalty>(SharedDataLayout::TURN_WEIGHT_PENALTIES,
+                                                 turn_weight_penalties_header.number_of_penalties *
+                                                     sizeof(TurnPenalty));
+
+    boost::filesystem::ifstream turn_duration_penalties_file(config.turn_duration_penalties_path);
+    if (!turn_duration_penalties_file)
+    {
+        throw util::exception("Could not open " + config.turn_duration_penalties_path.string() +
+                              " for reading.");
+    }
+    extractor::io::TurnPenaltiesHeader turn_duration_penalties_header;
+    turn_duration_penalties_file.read(reinterpret_cast<char *>(&turn_duration_penalties_header),
+                                      sizeof(turn_duration_penalties_header));
+    shared_layout_ptr->SetBlockSize<TurnPenalty>(
+        SharedDataLayout::TURN_DURATION_PENALTIES,
+        turn_duration_penalties_header.number_of_penalties * sizeof(TurnPenalty));
 
     // load coordinate size
     boost::filesystem::ifstream nodes_input_stream(config.nodes_data_path, std::ios::binary);
@@ -661,6 +689,19 @@ int Storage::Run()
             core_marker_ptr[bucket] = (value | (1u << offset));
         }
     }
+
+    // load turn penalties
+    auto *turn_weight_penalties_ptr = shared_layout_ptr->GetBlockPtr<TurnPenalty, true>(
+        shared_memory_ptr, SharedDataLayout::TURN_WEIGHT_PENALTIES);
+    auto *turn_duration_penalties_ptr = shared_layout_ptr->GetBlockPtr<TurnPenalty, true>(
+        shared_memory_ptr, SharedDataLayout::TURN_DURATION_PENALTIES);
+    // seek to begining of actual data block
+    turn_weight_penalties_file.read(reinterpret_cast<char *>(turn_weight_penalties_ptr),
+                                    sizeof(TurnPenalty) *
+                                        turn_weight_penalties_header.number_of_penalties);
+    turn_duration_penalties_file.read(reinterpret_cast<char *>(turn_duration_penalties_ptr),
+                                      sizeof(TurnPenalty) *
+                                          turn_duration_penalties_header.number_of_penalties);
 
     // load the nodes of the search graph
     QueryGraph::NodeArrayEntry *graph_node_list_ptr =

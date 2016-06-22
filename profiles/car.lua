@@ -142,7 +142,6 @@ maxspeed_table = {
 }
 
 -- set profile properties
-properties.u_turn_penalty                  = 20
 properties.traffic_signal_penalty          = 2
 properties.use_turn_restrictions           = true
 properties.continue_straight_at_waypoint   = true
@@ -152,8 +151,9 @@ properties.weight_name                     = 'duration'
 --properties.weight_name                     = 'distance'
 
 local side_road_speed_multiplier = 0.8
-
 local turn_penalty               = 7.5
+local uturn_penalty              = 20
+
 -- Note: this biases right-side driving.  Should be
 -- inverted for left-driving countries.
 local turn_bias                  = properties.left_hand_driving and 1/1.075 or 1.075
@@ -595,14 +595,25 @@ function way_function (way, result)
   result.is_startpoint = result.forward_mode == mode.driving or result.backward_mode == mode.driving
 end
 
-function turn_function (angle)
+function turn_function (turn)
   -- Use a sigmoid function to return a penalty that maxes out at turn_penalty
   -- over the space of 0-180 degrees.  Values here were chosen by fitting
   -- the function to some turn penalty samples from real driving.
   -- multiplying by 10 converts to deci-seconds see issue #1318
-  if angle>=0 then
-    return 10 * turn_penalty / (1 + 2.718 ^ - ((13 / turn_bias) * angle/180 - 6.5*turn_bias))
+  if turn.angle >= 0 then
+    turn.duration = turn_penalty / (1 + math.exp( -((13 / turn_bias) *  turn.angle/180 - 6.5*turn_bias)))
   else
-    return 10 * turn_penalty / (1 + 2.718 ^  - ((13 * turn_bias) * - angle/180 - 6.5/turn_bias))
+    turn.duration = turn_penalty / (1 + math.exp( -((13 * turn_bias) * -turn.angle/180 - 6.5/turn_bias)))
+  end
+
+  if turn.is_uturn then
+    turn.duration = turn.duration + uturn_penalty
+  end
+
+  -- for distance based routing we don't want to have penalties based on turn angle
+  if properties.weight_name == 'distance' then
+     turn.weight = 0
+  else
+     turn.weight = turn.duration
   end
 end

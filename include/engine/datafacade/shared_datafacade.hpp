@@ -92,6 +92,8 @@ class SharedDataFacade final : public BaseDataFacade
     util::ShM<uint8_t, true>::vector m_datasource_list;
     util::ShM<std::uint32_t, true>::vector m_lane_description_offsets;
     util::ShM<extractor::guidance::TurnLaneType::Mask, true>::vector m_lane_description_masks;
+    util::ShM<TurnPenalty, true>::vector m_turn_weight_penalties;
+    util::ShM<TurnPenalty, true>::vector m_turn_duration_penalties;
 
     util::ShM<char, true>::vector m_datasource_name_data;
     util::ShM<std::size_t, true>::vector m_datasource_name_offsets;
@@ -283,6 +285,29 @@ class SharedDataFacade final : public BaseDataFacade
         m_is_core_node = std::move(is_core_node);
     }
 
+    void LoadTurnPenalties()
+    {
+        auto turn_weight_penalties_ptr = data_layout->GetBlockPtr<TurnPenalty>(
+            shared_memory, storage::SharedDataLayout::TURN_WEIGHT_PENALTIES);
+        m_turn_weight_penalties = util::ShM<TurnPenalty, true>::vector(
+            turn_weight_penalties_ptr,
+            data_layout->num_entries[storage::SharedDataLayout::TURN_WEIGHT_PENALTIES]);
+        if (data_layout->num_entries[storage::SharedDataLayout::TURN_DURATION_PENALTIES] == 0)
+        {
+            m_turn_duration_penalties = util::ShM<TurnPenalty, true>::vector(
+                turn_weight_penalties_ptr,
+                data_layout->num_entries[storage::SharedDataLayout::TURN_WEIGHT_PENALTIES]);
+        }
+        else
+        {
+            auto turn_duration_penalties_ptr = data_layout->GetBlockPtr<TurnPenalty>(
+                shared_memory, storage::SharedDataLayout::TURN_WEIGHT_PENALTIES);
+            m_turn_duration_penalties = util::ShM<TurnPenalty, true>::vector(
+                turn_duration_penalties_ptr,
+                data_layout->num_entries[storage::SharedDataLayout::TURN_DURATION_PENALTIES]);
+        }
+    }
+
     void LoadGeometries()
     {
         auto geometries_index_ptr = data_layout->GetBlockPtr<unsigned>(
@@ -445,6 +470,7 @@ class SharedDataFacade final : public BaseDataFacade
                 LoadNodeAndEdgeInformation();
                 LoadGeometries();
                 LoadTimestamp();
+                LoadTurnPenalties();
                 LoadViaNodeList();
                 LoadNames();
                 LoadTurnLaneDescriptions();
@@ -575,6 +601,18 @@ class SharedDataFacade final : public BaseDataFacade
     virtual unsigned GetGeometryIndexForEdgeID(const unsigned id) const override final
     {
         return m_via_node_list.at(id);
+    }
+
+    virtual TurnPenalty GetWeightPenaltyForEdgeID(const unsigned id) const override final
+    {
+        BOOST_ASSERT(m_turn_weight_penalties.size() > id);
+        return m_turn_weight_penalties[id];
+    }
+
+    virtual TurnPenalty GetDurationPenaltyForEdgeID(const unsigned id) const override final
+    {
+        BOOST_ASSERT(m_turn_duration_penalties.size() > id);
+        return m_turn_duration_penalties[id];
     }
 
     extractor::guidance::TurnInstruction
