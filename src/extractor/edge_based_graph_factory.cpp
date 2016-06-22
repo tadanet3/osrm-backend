@@ -189,6 +189,7 @@ void EdgeBasedGraphFactory::Run(ScriptingEnvironment &scripting_environment,
                                 const std::string &turn_lane_data_filename,
                                 const std::string &edge_segment_lookup_filename,
                                 const std::string &edge_penalty_filename,
+                                const std::string &edge_penalty_index_filename,
                                 const bool generate_edge_lookup)
 {
     TIMER_START(renumber);
@@ -206,6 +207,7 @@ void EdgeBasedGraphFactory::Run(ScriptingEnvironment &scripting_environment,
                               turn_lane_data_filename,
                               edge_segment_lookup_filename,
                               edge_penalty_filename,
+                              edge_penalty_index_filename,
                               generate_edge_lookup);
 
     TIMER_STOP(generate_edges);
@@ -305,6 +307,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
     const std::string &turn_lane_data_filename,
     const std::string &edge_segment_lookup_filename,
     const std::string &edge_fixed_penalties_filename,
+    const std::string &edge_penalties_index_filename,
     const bool generate_edge_lookup)
 {
     util::SimpleLogger().Write() << "generating edge-expanded edges";
@@ -317,12 +320,12 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
     std::ofstream edge_data_file(original_edge_data_filename.c_str(), std::ios::binary);
     std::ofstream edge_segment_file;
-    std::ofstream edge_penalty_file;
+    std::ofstream edge_penalty_file(edge_fixed_penalties_filename.c_str(), std::ios::binary);
+    std::ofstream edge_penalty_index_file(edge_penalties_index_filename.c_str(), std::ios::binary);
 
     if (generate_edge_lookup)
     {
         edge_segment_file.open(edge_segment_lookup_filename.c_str(), std::ios::binary);
-        edge_penalty_file.open(edge_fixed_penalties_filename.c_str(), std::ios::binary);
     }
 
     // Writes a dummy value at the front that is updated later with the total length
@@ -463,12 +466,15 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
                 // NOTE: potential overflow here if we hit 2^32 routable edges
                 BOOST_ASSERT(m_edge_based_edge_list.size() <= std::numeric_limits<NodeID>::max());
-                m_edge_based_edge_list.emplace_back(edge_data1.edge_id,
-                                                    edge_data2.edge_id,
-                                                    m_edge_based_edge_list.size(),
-                                                    weight,
-                                                    true,
-                                                    false);
+                auto turn_id = m_edge_based_edge_list.size();
+                m_edge_based_edge_list.emplace_back(
+                    edge_data1.edge_id, edge_data2.edge_id, turn_id, weight, true, false);
+
+                unsigned fixed_penalty = weight - edge_data1.weight;
+                BOOST_ASSERT(edge_penalty_file.tellp() == turn_id * sizeof(fixed_penalty));
+                // save penalties index by turn_id
+                edge_penalty_file.write(reinterpret_cast<const char *>(&fixed_penalty),
+                                        sizeof(fixed_penalty));
 
                 // Here is where we write out the mapping between the edge-expanded edges, and
                 // the node-based edges that are originally used to calculate the `weight`
@@ -534,11 +540,12 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                         m_node_info_list[m_compressed_edge_container.GetFirstEdgeTargetID(
                             turn.eid)];
 
-                    const unsigned fixed_penalty = weight - edge_data1.weight;
-                    lookup::PenaltyBlock penaltyblock = {
-                        fixed_penalty, from_node.node_id, via_node.node_id, to_node.node_id};
-                    edge_penalty_file.write(reinterpret_cast<const char *>(&penaltyblock),
-                                            sizeof(penaltyblock));
+                    lookup::TurnIndexBlock turn_index_block = {
+                        from_node.node_id, via_node.node_id, to_node.node_id};
+                    BOOST_ASSERT(edge_penalty_index_file.tellp() / (sizeof(turn_index_block)) ==
+                                 turn_id);
+                    edge_penalty_index_file.write(reinterpret_cast<const char *>(&turn_index_block),
+                                                  sizeof(turn_index_block));
                 }
             }
         }

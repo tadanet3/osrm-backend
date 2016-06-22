@@ -503,6 +503,7 @@ Extractor::BuildEdgeExpandedGraph(ScriptingEnvironment &scripting_environment,
                                  config.turn_lane_data_file_name,
                                  config.edge_segment_lookup_path,
                                  config.edge_penalty_path,
+                                 config.edge_penalty_index_path,
                                  config.generate_edge_lookup);
 
     WriteTurnLaneData(config.turn_lane_descriptions_file_name);
