@@ -257,10 +257,6 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 facade->GetUncompressedDurations(geometry_index, duration_vector);
                 BOOST_ASSERT(duration_vector.size() == id_vector.size());
 
-                std::vector<EdgeWeight> weight_vector;
-                facade->GetUncompressedWeights(geometry_index, weight_vector);
-                BOOST_ASSERT(weight_vector.size() == id_vector.size());
-
                 std::vector<DatasourceID> datasource_vector;
                 facade->GetUncompressedDatasources(geometry_index, datasource_vector);
 
@@ -269,6 +265,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 BOOST_ASSERT(weight_vector.size() == id_vector.size());
 
                 const auto total_weight = std::accumulate(weight_vector.begin(), weight_vector.end(), 0);
+                const auto total_duration = std::accumulate(duration_vector.begin(), duration_vector.end(), 0);
 
                 const bool is_first_segment = unpacked_path.empty();
 
@@ -304,6 +301,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 unpacked_path.back().turn_instruction = turn_instruction;
                 // FIXME this needs to be replaced by a turn penalty lookup
                 unpacked_path.back().duration_until_turn += (edge_data.weight - total_weight);
+                unpacked_path.back().weight_until_turn += (edge_data.weight - total_weight);
             });
 
         std::size_t start_index = 0, end_index = 0;
@@ -386,6 +384,9 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             const auto source_weight = start_traversed_in_reverse
                                            ? phantom_node_pair.source_phantom.reverse_weight
                                            : phantom_node_pair.source_phantom.forward_weight;
+            const auto source_duration = start_traversed_in_reverse
+                                             ? phantom_node_pair.source_phantom.reverse_duration
+                                             : phantom_node_pair.source_phantom.forward_duration;
             // The above code will create segments for (v, w), (w,x), (x, y) and (y, Z).
             // However the first segment duration needs to be adjusted to the fact that the source
             // phantom is in the middle of the segment. We do this by subtracting v--s from the
@@ -399,10 +400,10 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
             // TODO this creates a scenario where it's possible the duration from a phantom
             // node to the first turn would be the same as from end to end of a segment,
             // which is obviously incorrect and not ideal...
-            unpacked_path.front().duration_until_turn =
-                std::max(unpacked_path.front().duration_until_turn - source_weight, 0);
             unpacked_path.front().weight_until_turn =
                 std::max(unpacked_path.front().weight_until_turn - source_weight, 0);
+            unpacked_path.front().duration_until_turn =
+                std::max(unpacked_path.front().duration_until_turn - source_duration, 0);
         }
 
         // there is no equivalent to a node-based node in an edge-expanded graph.
