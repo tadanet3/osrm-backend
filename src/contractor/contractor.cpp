@@ -3,7 +3,7 @@
 #include "contractor/graph_contractor.hpp"
 
 #include "extractor/compressed_edge_container.hpp"
-#include "extractor/edge_based_graph_factory.hpp"
+#include "extractor/io.hpp"
 #include "extractor/node_based_edge.hpp"
 
 #include "util/exception.hpp"
@@ -445,29 +445,14 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
         return boost::interprocess::mapped_region();
     }();
 
-    struct EdgeBasedGraphHeader
-    {
-        util::FingerPrint fingerprint;
-        std::uint64_t number_of_edges;
-        EdgeID max_edge_id;
-        // Set the struct packing to 1 byte word sizes.  This prevents any padding.  We only use
-        // this struct once, so any alignment penalty is trivial.  If this is *not* done, then
-        // the struct will be padded out by an extra 4 bytes, and sizeof() will mean we read
-        // too much data from the original file.
-    } __attribute((packed));
-    // make sure this is really packed
-    static_assert(sizeof(EdgeBasedGraphHeader) ==
-                      sizeof(util::FingerPrint) + sizeof(std::uint64_t) + sizeof(EdgeID),
-                  "Packing of EdgeBasedGraphHeader failed");
-
-    const EdgeBasedGraphHeader graph_header =
-        *(reinterpret_cast<const EdgeBasedGraphHeader *>(edge_based_graph_region.get_address()));
+    auto graph_header = reinterpret_cast<const extractor::io::EdgeBasedGraphHeader *>(
+        edge_based_graph_region.get_address());
 
     const util::FingerPrint fingerprint_valid = util::FingerPrint::GetValid();
-    graph_header.fingerprint.TestContractor(fingerprint_valid);
+    graph_header->fingerprint.TestContractor(fingerprint_valid);
 
-    edge_based_edge_list.resize(graph_header.number_of_edges);
-    util::SimpleLogger().Write() << "Reading " << graph_header.number_of_edges
+    edge_based_edge_list.resize(graph_header->number_of_edges);
+    util::SimpleLogger().Write() << "Reading " << graph_header->number_of_edges
                                  << " edges from the edge based graph";
 
     SegmentSpeedSourceFlatMap segment_speed_lookup;
@@ -782,17 +767,17 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
     tbb::parallel_invoke(maybe_save_geometries, save_datasource_indexes, save_datastore_names);
 
     auto edge_penalty_ptr = reinterpret_cast<std::uint32_t *>(edge_penalty_region.get_address());
-    auto turn_index_block_ptr = reinterpret_cast<const extractor::lookup::TurnIndexBlock *>(
+    auto turn_index_block_ptr = reinterpret_cast<const extractor::io::TurnIndexBlock *>(
         edge_penalty_index_region.get_address());
     auto edge_segment_byte_ptr = reinterpret_cast<const char *>(edge_segment_region.get_address());
     auto edge_based_edge_ptr = reinterpret_cast<extractor::EdgeBasedEdge *>(
         reinterpret_cast<char *>(edge_based_graph_region.get_address()) +
-        sizeof(EdgeBasedGraphHeader));
+        sizeof(extractor::io::EdgeBasedGraphHeader));
 
     const auto edge_based_edge_last = reinterpret_cast<extractor::EdgeBasedEdge *>(
         reinterpret_cast<char *>(edge_based_graph_region.get_address()) +
-        sizeof(EdgeBasedGraphHeader) +
-        sizeof(extractor::EdgeBasedEdge) * graph_header.number_of_edges);
+        sizeof(extractor::io::EdgeBasedGraphHeader) +
+        sizeof(extractor::EdgeBasedEdge) * graph_header->number_of_edges);
 
     while (edge_based_edge_ptr != edge_based_edge_last)
     {
@@ -803,18 +788,18 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
         if (update_edge_weights || update_turn_penalties)
         {
             bool skip_this_edge = false;
-            auto header = reinterpret_cast<const extractor::lookup::SegmentHeaderBlock *>(
-                edge_segment_byte_ptr);
-            edge_segment_byte_ptr += sizeof(extractor::lookup::SegmentHeaderBlock);
+            auto header =
+                reinterpret_cast<const extractor::io::SegmentHeaderBlock *>(edge_segment_byte_ptr);
+            edge_segment_byte_ptr += sizeof(extractor::io::SegmentHeaderBlock);
 
             auto previous_osm_node_id = header->previous_osm_node_id;
             EdgeWeight new_weight = 0;
             int compressed_edge_nodes = static_cast<int>(header->num_osm_nodes);
 
             auto segmentblocks =
-                reinterpret_cast<const extractor::lookup::SegmentBlock *>(edge_segment_byte_ptr);
+                reinterpret_cast<const extractor::io::SegmentBlock *>(edge_segment_byte_ptr);
             edge_segment_byte_ptr +=
-                sizeof(extractor::lookup::SegmentBlock) * (header->num_osm_nodes - 1);
+                sizeof(extractor::io::SegmentBlock) * (header->num_osm_nodes - 1);
 
             const auto num_segments = header->num_osm_nodes - 1;
             for (auto i : util::irange<std::size_t>(0, num_segments))
@@ -892,7 +877,7 @@ EdgeID Contractor::LoadEdgeExpandedGraph(
     }
 
     util::SimpleLogger().Write() << "Done reading edges";
-    return graph_header.max_edge_id;
+    return graph_header->max_edge_id;
 }
 
 void Contractor::ReadNodeLevels(std::vector<float> &node_levels) const
