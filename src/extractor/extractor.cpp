@@ -125,7 +125,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
         util::SimpleLogger().Write() << "Threads: " << number_of_threads;
 
         ExtractionContainers extraction_containers;
-        auto extractor_callbacks = util::make_unique<ExtractorCallbacks>(extraction_containers);
+        auto extractor_callbacks = util::make_unique<ExtractorCallbacks>(
+            extraction_containers, true /*main_context.properties.weight_name == "duration"*/);
 
         const osmium::io::File input_file(config.input_path.string());
         osmium::io::Reader reader(input_file);

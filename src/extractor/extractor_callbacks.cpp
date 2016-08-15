@@ -4,6 +4,7 @@
 #include "extractor/extraction_node.hpp"
 #include "extractor/extraction_way.hpp"
 #include "extractor/guidance/road_classification.hpp"
+#include "extractor/profile_properties.hpp"
 #include "extractor/restriction.hpp"
 
 #include "util/for_each_pair.hpp"
@@ -31,8 +32,9 @@ namespace extractor
 using TurnLaneDescription = guidance::TurnLaneDescription;
 namespace TurnLaneType = guidance::TurnLaneType;
 
-ExtractorCallbacks::ExtractorCallbacks(ExtractionContainers &extraction_containers)
-    : external_memory(extraction_containers)
+ExtractorCallbacks::ExtractorCallbacks(ExtractionContainers &extraction_containers_,
+                                       bool fallback_to_duration)
+    : external_memory(extraction_containers_), fallback_to_duration(fallback_to_duration)
 {
     // we reserved 0, 1, 2, 3 for the empty case
     string_map[MapKey("", "", "", "")] = 0;
@@ -84,8 +86,8 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
          parsed_way.backward_travel_mode == TRAVEL_MODE_INACCESSIBLE) ||
         (parsed_way.forward_speed <= 0 && parsed_way.backward_speed <= 0 &&
          parsed_way.duration <= 0) ||
-        (parsed_way.forward_weight_per_meter <= 0 && parsed_way.backward_weight_per_meter <= 0 &&
-         parsed_way.weight <= 0))
+        (!fallback_to_duration && parsed_way.forward_weight_per_meter <= 0 &&
+         parsed_way.backward_weight_per_meter <= 0 && parsed_way.weight <= 0))
     { // Only true if the way is specified by the speed profile
         return;
     }
@@ -129,18 +131,32 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
         BOOST_ASSERT(parsed_way.duration > 0 || parsed_way.forward_speed > 0);
         forward_duration_data =
             toValueByEdgeOrByMeter(parsed_way.duration, parsed_way.forward_speed / 3.6);
-        BOOST_ASSERT(parsed_way.weight > 0 || parsed_way.forward_weight_per_meter > 0);
-        forward_weight_data =
-            toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.forward_weight_per_meter);
+        // fallback to duration as weight
+        if (parsed_way.weight > 0 || parsed_way.forward_weight_per_meter > 0)
+        {
+            forward_weight_data =
+                toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.forward_weight_per_meter);
+        }
+        else if (fallback_to_duration)
+        {
+            forward_weight_data = forward_duration_data;
+        }
     }
     if (parsed_way.backward_travel_mode != TRAVEL_MODE_INACCESSIBLE)
     {
         BOOST_ASSERT(parsed_way.duration > 0 || parsed_way.backward_speed > 0);
         backward_duration_data =
             toValueByEdgeOrByMeter(parsed_way.duration, parsed_way.backward_speed / 3.6);
-        BOOST_ASSERT(parsed_way.weight > 0 || parsed_way.backward_weight_per_meter > 0);
-        backward_weight_data =
-            toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.backward_weight_per_meter);
+        // fallback to duration as weight
+        if (parsed_way.weight > 0 || parsed_way.backward_weight_per_meter > 0)
+        {
+            backward_weight_data =
+                toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.backward_weight_per_meter);
+        }
+        else if (fallback_to_duration)
+        {
+            backward_weight_data = backward_duration_data;
+        }
     }
 
     // FIXME this need to be moved into the profiles
