@@ -176,6 +176,10 @@ int Storage::Run()
                                               number_of_original_edges);
     shared_layout_ptr->SetBlockSize<extractor::TravelMode>(SharedDataLayout::TRAVEL_MODE,
                                                            number_of_original_edges);
+    shared_layout_ptr->SetBlockSize<util::guidance::TurnBearing>(SharedDataLayout::PRE_TURN_BEARING,
+                                                                 number_of_original_edges);
+    shared_layout_ptr->SetBlockSize<util::guidance::TurnBearing>(
+        SharedDataLayout::POST_TURN_BEARING, number_of_original_edges);
     shared_layout_ptr->SetBlockSize<extractor::guidance::TurnInstruction>(
         SharedDataLayout::TURN_INSTRUCTION, number_of_original_edges);
     shared_layout_ptr->SetBlockSize<LaneDataID>(SharedDataLayout::LANE_DATA_ID,
@@ -506,6 +510,12 @@ int Storage::Run()
     extractor::TravelMode *travel_mode_ptr =
         shared_layout_ptr->GetBlockPtr<extractor::TravelMode, true>(shared_memory_ptr,
                                                                     SharedDataLayout::TRAVEL_MODE);
+    util::guidance::TurnBearing *pre_turn_bearing_ptr =
+        shared_layout_ptr->GetBlockPtr<util::guidance::TurnBearing, true>(
+            shared_memory_ptr, SharedDataLayout::PRE_TURN_BEARING);
+    util::guidance::TurnBearing *post_turn_bearing_ptr =
+        shared_layout_ptr->GetBlockPtr<util::guidance::TurnBearing, true>(
+            shared_memory_ptr, SharedDataLayout::POST_TURN_BEARING);
 
     LaneDataID *lane_data_id_ptr = shared_layout_ptr->GetBlockPtr<LaneDataID, true>(
         shared_memory_ptr, SharedDataLayout::LANE_DATA_ID);
@@ -527,6 +537,8 @@ int Storage::Run()
         lane_data_id_ptr[i] = current_edge_data.lane_data_id;
         turn_instructions_ptr[i] = current_edge_data.turn_instruction;
         entry_class_id_ptr[i] = current_edge_data.entry_classid;
+        pre_turn_bearing_ptr[i] = current_edge_data.pre_turn_bearing;
+        post_turn_bearing_ptr[i] = current_edge_data.post_turn_bearing;
     }
     edges_input_stream.close();
 

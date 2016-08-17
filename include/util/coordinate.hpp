@@ -151,6 +151,7 @@ struct Coordinate
     bool IsValid() const;
     friend bool operator==(const Coordinate lhs, const Coordinate rhs);
     friend bool operator!=(const Coordinate lhs, const Coordinate rhs);
+    friend bool operator<(const Coordinate lhs, const Coordinate rhs);
     friend std::ostream &operator<<(std::ostream &out, const Coordinate coordinate);
 };
 

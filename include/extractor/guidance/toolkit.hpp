@@ -44,15 +44,14 @@ using util::guidance::leavesRoundabout;
 
 namespace detail
 {
-const constexpr double DESIRED_SEGMENT_LENGTH = 10.0;
-
 template <typename IteratorType>
 util::Coordinate
 getCoordinateFromCompressedRange(util::Coordinate current_coordinate,
                                  const IteratorType compressed_geometry_begin,
                                  const IteratorType compressed_geometry_end,
                                  const util::Coordinate final_coordinate,
-                                 const std::vector<extractor::QueryNode> &query_nodes)
+                                 const std::vector<extractor::QueryNode> &query_nodes,
+                                 const double desired_segment_length)
 {
     const auto extractCoordinateFromNode =
         [](const extractor::QueryNode &node) -> util::Coordinate {
@@ -61,13 +60,14 @@ getCoordinateFromCompressedRange(util::Coordinate current_coordinate,
     double distance_to_current_coordinate = 0;
     double distance_to_next_coordinate = 0;
 
-    // get the length that is missing from the current segment to reach DESIRED_SEGMENT_LENGTH
-    const auto getFactor = [](const double first_distance, const double second_distance) {
-        BOOST_ASSERT(first_distance < detail::DESIRED_SEGMENT_LENGTH);
+    // get the length that is missing from the current segment to reach desired_segment_length
+    const auto getFactor = [desired_segment_length](const double first_distance,
+                                                    const double second_distance) {
+        BOOST_ASSERT(first_distance < desired_segment_length);
         double segment_length = second_distance - first_distance;
         BOOST_ASSERT(segment_length > 0);
-        BOOST_ASSERT(second_distance >= detail::DESIRED_SEGMENT_LENGTH);
-        double missing_distance = detail::DESIRED_SEGMENT_LENGTH - first_distance;
+        BOOST_ASSERT(second_distance >= desired_segment_length);
+        double missing_distance = desired_segment_length - first_distance;
         return std::max(0., std::min(missing_distance / segment_length, 1.0));
     };
 
@@ -82,7 +82,7 @@ getCoordinateFromCompressedRange(util::Coordinate current_coordinate,
             util::coordinate_calculation::haversineDistance(current_coordinate, next_coordinate);
 
         // reached point where coordinates switch between
-        if (distance_to_next_coordinate >= detail::DESIRED_SEGMENT_LENGTH)
+        if (distance_to_next_coordinate >= desired_segment_length)
             return util::coordinate_calculation::interpolateLinear(
                 getFactor(distance_to_current_coordinate, distance_to_next_coordinate),
                 current_coordinate,
@@ -98,8 +98,8 @@ getCoordinateFromCompressedRange(util::Coordinate current_coordinate,
         util::coordinate_calculation::haversineDistance(current_coordinate, final_coordinate);
 
     // reached point where coordinates switch between
-    if (distance_to_current_coordinate < detail::DESIRED_SEGMENT_LENGTH &&
-        distance_to_next_coordinate >= detail::DESIRED_SEGMENT_LENGTH)
+    if (distance_to_current_coordinate < desired_segment_length &&
+        distance_to_next_coordinate >= desired_segment_length)
         return util::coordinate_calculation::interpolateLinear(
             getFactor(distance_to_current_coordinate, distance_to_next_coordinate),
             current_coordinate,
@@ -109,7 +109,7 @@ getCoordinateFromCompressedRange(util::Coordinate current_coordinate,
 }
 } // namespace detail
 
-// Finds a (potentially interpolated) coordinate that is DESIRED_SEGMENT_LENGTH away
+// Finds a (potentially interpolated) coordinate that is desired_segment_length away
 // from the start of an edge
 inline util::Coordinate
 getRepresentativeCoordinate(const NodeID from_node,
@@ -117,7 +117,8 @@ getRepresentativeCoordinate(const NodeID from_node,
                             const EdgeID via_edge_id,
                             const bool traverse_in_reverse,
                             const extractor::CompressedEdgeContainer &compressed_geometries,
-                            const std::vector<extractor::QueryNode> &query_nodes)
+                            const std::vector<extractor::QueryNode> &query_nodes,
+                            const double desired_segment_length = 10.0)
 {
     const auto extractCoordinateFromNode =
         [](const extractor::QueryNode &node) -> util::Coordinate {
@@ -141,11 +142,19 @@ getRepresentativeCoordinate(const NodeID from_node,
         const auto final_coordinate = extractCoordinateFromNode(query_nodes[final_node]);
 
         if (traverse_in_reverse)
-            return detail::getCoordinateFromCompressedRange(
-                base_coordinate, geometry.rbegin(), geometry.rend(), final_coordinate, query_nodes);
+            return detail::getCoordinateFromCompressedRange(base_coordinate,
+                                                            geometry.rbegin(),
+                                                            geometry.rend(),
+                                                            final_coordinate,
+                                                            query_nodes,
+                                                            desired_segment_length);
         else
-            return detail::getCoordinateFromCompressedRange(
-                base_coordinate, geometry.begin(), geometry.end(), final_coordinate, query_nodes);
+            return detail::getCoordinateFromCompressedRange(base_coordinate,
+                                                            geometry.begin(),
+                                                            geometry.end(),
+                                                            final_coordinate,
+                                                            query_nodes,
+                                                            desired_segment_length);
     }
 }
 

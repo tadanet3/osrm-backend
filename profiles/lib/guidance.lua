@@ -42,7 +42,7 @@ road_types = { ["motorway"] = true,
 
 link_types = { ["motorway_link"] = true, ["trunk_link"] = true, ["primary_link"] = true, ["secondary_link"] = true, ["tertiary_link"] = true }
 
-function Guidance.set_classification (highway, result)
+function Guidance.set_classification (highway, result, input_way)
     if motorway_types[highway] then
         result.road_classification.motorway_class = true;
     end
@@ -59,6 +59,14 @@ function Guidance.set_classification (highway, result)
     else
         result.road_classification.may_be_ignored = true;
     end
+
+    lane_count = input_way:get_value_by_key("lanes")
+    if lane_count and lane_count ~= "" then
+        lc = tonumber(lane_count)
+        if lane_count ~= nil then
+            result.road_classification.num_lanes = lc
+        end
+    end
 end
 
 -- returns forward,backward psv lane count
@@ -69,19 +77,19 @@ local function get_psv_counts(way)
 
     local fw = 0;
     local bw = 0;
-    if( psv and psv ~= "" ) then
+    if  psv and psv ~= ""  then
         fw = tonumber(psv)
         if( fw == nil ) then
             fw = 0
         end
-    end 
-    if( psv_forward and psv_forward ~= "" ) then
+    end
+    if psv_forward and psv_forward ~= "" then
         fw = tonumber(psv_forward)
         if( fw == nil ) then
             fw = 0
         end
-    end 
-    if( psv_backward and psv_backward ~= "" ) then
+    end
+    if psv_backward and psv_backward ~= "" then
         bw = tonumber(psv_backward);
         if( bw == nil ) then
             bw = 0

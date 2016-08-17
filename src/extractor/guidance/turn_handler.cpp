@@ -136,7 +136,7 @@ Intersection TurnHandler::handleThreeWayTurn(const EdgeID via_edge, Intersection
                OOOOOOO
      */
     const auto fork_range = findFork(via_edge, intersection);
-    if (fork_range.first == 1 && fork_range.second == 2)
+    if (fork_range.first == 1 && fork_range.second == 2 && obvious_index == 0)
         assignFork(via_edge, intersection[2], intersection[1]);
 
     /*  T Intersection
@@ -657,20 +657,20 @@ void TurnHandler::handleDistinctConflict(const EdgeID via_edge,
 
     if (getTurnDirection(left.turn.angle) == DirectionModifier::Right)
     {
-        if (angularDeviation(left.turn.angle, 90) > angularDeviation(right.turn.angle, 90))
-        {
-            left.turn.instruction = {left_type, DirectionModifier::SlightRight};
-            right.turn.instruction = {right_type, DirectionModifier::Right};
-        }
-        else
+        if (angularDeviation(left.turn.angle, 85) >= angularDeviation(right.turn.angle, 85))
         {
             left.turn.instruction = {left_type, DirectionModifier::Right};
             right.turn.instruction = {right_type, DirectionModifier::SharpRight};
         }
+        else
+        {
+            left.turn.instruction = {left_type, DirectionModifier::SlightRight};
+            right.turn.instruction = {right_type, DirectionModifier::Right};
+        }
     }
     else
     {
-        if (angularDeviation(left.turn.angle, 270) > angularDeviation(right.turn.angle, 270))
+        if (angularDeviation(left.turn.angle, 265) >= angularDeviation(right.turn.angle, 265))
         {
             left.turn.instruction = {left_type, DirectionModifier::SharpLeft};
             right.turn.instruction = {right_type, DirectionModifier::Left};

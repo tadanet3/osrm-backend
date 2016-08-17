@@ -741,16 +741,16 @@ Feature: Simple Turns
 
         And the ways
             | nodes | highway | oneway |
-            | abc   | primary | no     |
-            | db    | primary | no     |
+            | abc   | primary | yes    |
+            | bd    | primary | yes    |
             | eb    | primary | yes    |
-            | fb    | primary | no     |
-            | bg    | primary | no     |
+            | bf    | primary | yes    |
+            | bg    | primary | yes    |
 
         When I route I should get
             | waypoints | route     | turns                          |
-            | a,d       | abc,db,db | depart,turn sharp right,arrive |
-            | a,f       | abc,fb,fb | depart,turn right,arrive       |
+            | a,d       | abc,bd,bd | depart,turn sharp right,arrive |
+            | a,f       | abc,bf,bf | depart,turn right,arrive       |
 
     Scenario: Right Turn Assignment Three Conflicting Turns with invalid - 3
         Given the node map

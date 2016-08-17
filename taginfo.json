@@ -188,6 +188,8 @@
         {"key": "highway", "value": "default"},
         {"key": "width", "description": "Penalties for narrow streets"},
         {"key": "lanes", "description": "Penalties for shared single lane streets"},
+        {"key": "lanes:forward", "description": "Lanes in forward direction"},
+        {"key": "lanes:back", "description": "Lanes in backward direction"},
         {"key": "surface", "value": "asphalt"},
         {"key": "surface", "value": "concrete"},
         {"key": "surface", "value": "concrete:plates"},

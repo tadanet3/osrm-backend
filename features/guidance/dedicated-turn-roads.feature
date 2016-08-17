@@ -34,6 +34,35 @@ Feature: Slipways and Dedicated Turn Lanes
 
     Scenario: Turn Instead of Ramp
         Given the node map
+            |   |   |   |   |   |   |   | e |   |
+            | a | b |   |   |   |   |   | c | d |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   | h |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   | f |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   |   |   |
+            |   |   |   |   |   |   |   | g |   |
+
+        And the ways
+            | nodes | highway       | name   |
+            | abcd  | motorway      | first  |
+            | bhf   | motorway_link |        |
+            | efg   | primary       | second |
+
+       When I route I should get
+            | waypoints | route                | turns                                             |
+            | a,g       | first,,second,second | depart,off ramp slight right,turn straight,arrive |
+
+    Scenario: Turn Instead of Ramp
+        Given the node map
             |   |   |   |   | e |   |
             | a | b |   |   | c | d |
             |   |   |   | h |   |   |
@@ -52,8 +81,8 @@ Feature: Slipways and Dedicated Turn Lanes
             | efg   | primary       | second |
 
        When I route I should get
-            | waypoints | route                | turns                                             |
-            | a,g       | first,,second,second | depart,off ramp slight right,turn straight,arrive |
+            | waypoints | route               | turns                        |
+            | a,g       | first,second,second | depart,off ramp right,arrive |
 
     Scenario: Inner city expressway with on road
         Given the node map
