@@ -1,6 +1,8 @@
-#include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/intersection_generator.hpp"
+#include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/toolkit.hpp"
+
+#include "util/guidance/toolkit.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -23,10 +25,14 @@ IntersectionGenerator::IntersectionGenerator(
     const RestrictionMap &restriction_map,
     const std::unordered_set<NodeID> &barrier_nodes,
     const std::vector<QueryNode> &node_info_list,
-    const CompressedEdgeContainer &compressed_edge_container)
+    const CompressedEdgeContainer &compressed_edge_container,
+    const util::NameTable &name_table_,
+    const SuffixTable &street_name_suffix_table_)
     : node_based_graph(node_based_graph), restriction_map(restriction_map),
       barrier_nodes(barrier_nodes), node_info_list(node_info_list),
-      compressed_edge_container(compressed_edge_container)
+      compressed_edge_container(compressed_edge_container), name_table(name_table_),
+      street_name_suffix_table(street_name_suffix_table_)
+
 {
 }
 
@@ -194,7 +200,11 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
         return false;
 
     // need to be same name
-    if (first_data.name_id != second_data.name_id)
+    if (util::guidance::requiresNameAnnounced(name_table.GetNameForID(first_data.name_id),
+                                              name_table.GetRefForID(first_data.name_id),
+                                              name_table.GetNameForID(second_data.name_id),
+                                              name_table.GetRefForID(second_data.name_id),
+                                              street_name_suffix_table))
         return false;
 
     // compatibility is required
@@ -296,8 +306,13 @@ bool IntersectionGenerator::CanMerge(const NodeID node_at_intersection,
     }();
 
     // needs to be same road coming in
-    if (node_based_graph.GetEdgeData(intersection[third_index].turn.eid).name_id !=
-        first_data.name_id)
+    const auto &third_data = node_based_graph.GetEdgeData(intersection[third_index].turn.eid);
+
+    if (util::guidance::requiresNameAnnounced(name_table.GetNameForID(third_data.name_id),
+                                              name_table.GetRefForID(third_data.name_id),
+                                              name_table.GetNameForID(first_data.name_id),
+                                              name_table.GetRefForID(first_data.name_id),
+                                              street_name_suffix_table))
         return false;
 
     // we only allow collapsing of a Y like fork. So the angle to the third index has to be
@@ -459,7 +474,7 @@ Intersection IntersectionGenerator::MergeSegregatedRoads(const NodeID intersecti
         intersection[0].entry_allowed = false;
     }
 
-    // a merge including the first u-turn requres an adjustment of the turn angles
+    // a merge including the first u-turn requires an adjustment of the turn angles
     // therefore these are handled prior to this step
     for (std::size_t index = 2; index < intersection.size(); ++index)
     {
