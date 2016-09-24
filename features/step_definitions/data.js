@@ -81,12 +81,14 @@ module.exports = function () {
 
         const grid = docstring.split(/\n/).map(row => row.match( /(.|[\r\n]){1,2}/g ) );
         grid.forEach((row, ri) => {
-            row.forEach((cell, ci) => {
-                node = cell.substring(0,1)
-                if( node != " " ) {
-                    q.defer(addNode, node, ri, ci);
-                }
-            } );
+            if (row) {
+                row.forEach((cell, ci) => {
+                    node = cell.substring(0,1)
+                    if( node != " " ) {
+                        q.defer(addNode, node, ri, ci);
+                    }
+                } );
+            }
         });
 
         q.awaitAll(callback);
