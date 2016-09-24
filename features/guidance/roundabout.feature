@@ -326,36 +326,36 @@ Feature: Basic Roundabout
     Scenario: Linked Roundabouts
         Given the node map
             """
-                                                            x
-            u .                                       . r '
-             .  ' .                                 .  .
-              .     t .                           .   .
-               .        ' .                   . s    .
-                v         . i . . . h . . . g .      .
-                 .      .   .               .   .   q
-                  .   .     .               .     . .
-                    j       .               .       f
-                    .       .               .       .
-                    .       .               .       .
-                    a       .               .       e
-                   .  '     .               .     ' .
-                  .     '   .               .   '   .
-                 .        ' b . . . c . . . d '     p
-                .         .                   .     .
-                m        .                      n   .
-                .       l                       .   .
-                .      .                        .   .
-                .     .                         .   .
-                .    .                           .  .
-                .   .                            .  .
-                .  .                              . .
-                . .                               . .
-                ..                                . .
-                k                                  ..
-               .                                   ..
-              .                                     .
-             .                                      .
-            w                                       o
+                                    x
+            u                     r  
+
+                t                    
+                              s      
+              v     i   h   g        
+                                q    
+
+                j               f    
+
+
+                a               e    
+                   
+
+                    b   c   d   p    
+
+              m               n      
+                  l                  
+
+
+
+
+
+
+
+              k                      
+
+
+
+            w                   o    
             """
 
         And the ways
