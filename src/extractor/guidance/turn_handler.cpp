@@ -5,6 +5,7 @@
 
 #include "util/guidance/toolkit.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -109,8 +110,16 @@ bool TurnHandler::isObviousOfTwo(const EdgeID via_edge,
     const bool turn_is_perfectly_straight =
         angularDeviation(road.turn.angle, STRAIGHT_ANGLE) < std::numeric_limits<double>::epsilon();
 
-    if (turn_is_perfectly_straight && in_data.name_id != EMPTY_NAMEID &&
-        in_data.name_id == node_based_graph.GetEdgeData(road.turn.eid).name_id)
+    const auto &road_data = node_based_graph.GetEdgeData(road.turn.eid);
+
+    const auto same_name =
+        !util::guidance::requiresNameAnnounced(name_table.GetNameForID(in_data.name_id),
+                                               name_table.GetRefForID(in_data.name_id),
+                                               name_table.GetNameForID(road_data.name_id),
+                                               name_table.GetRefForID(road_data.name_id),
+                                               street_name_suffix_table);
+
+    if (turn_is_perfectly_straight && in_data.name_id != EMPTY_NAMEID && same_name)
         return true;
 
     const bool is_much_narrower_than_other =
@@ -210,14 +219,18 @@ Intersection TurnHandler::handleComplexTurn(const EdgeID via_edge, Intersection 
     // check whether there is a turn of the same name
     const auto &in_data = node_based_graph.GetEdgeData(via_edge);
 
-    const bool has_same_name_turn = [&]() {
-        for (std::size_t i = 1; i < intersection.size(); ++i)
-        {
-            if (node_based_graph.GetEdgeData(intersection[i].turn.eid).name_id == in_data.name_id)
-                return true;
-        }
-        return false;
-    }();
+    const auto same_name = [&](const auto &road) {
+        const auto data = node_based_graph.GetEdgeData(road.turn.eid);
+        return !util::guidance::requiresNameAnnounced(name_table.GetNameForID(in_data.name_id),
+                                                      name_table.GetRefForID(in_data.name_id),
+                                                      name_table.GetNameForID(data.name_id),
+                                                      name_table.GetRefForID(data.name_id),
+                                                      street_name_suffix_table);
+    };
+
+    // Skip 0th as uturn always has the same name
+    const bool has_same_name_turn =
+        std::any_of(begin(intersection) + 1, end(intersection), same_name);
 
     // check whether the obvious choice is actually a through street
     if (obvious_index != 0)
