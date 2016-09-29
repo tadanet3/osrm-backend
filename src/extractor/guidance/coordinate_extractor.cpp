@@ -79,16 +79,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     if (coordinates.size() <= 2)
         return coordinates.back();
 
-    // get the distance along the road
-    const auto turn_segment_length = [&coordinates] {
-        double sum = 0;
-        for (auto coordinate = coordinates.begin(); coordinate + 1 != coordinates.end();
-             ++coordinate)
-            sum += util::coordinate_calculation::haversineDistance(*coordinate,
-                                                                   *(std::next(coordinate)));
-        return sum;
-    }();
-
     // In an ideal world, the road would only have two coordinates if it goes mainly straigt. Since
     // OSM is operating on noisy data, we have some variations going straight.
     //
