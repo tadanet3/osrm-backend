@@ -376,8 +376,8 @@ Feature: Collapse
             | cd    | primary |        |
 
         When I route I should get
-            | waypoints | route | turns         |
-            | a,d       | ,     | depart,arrive |
+            | waypoints | route    | turns                           |
+            | a,d       | ,Bridge, | depart,new name straight,arrive |
 
      Scenario: Crossing Bridge into Segregated Turn
         Given the node map
@@ -397,8 +397,8 @@ Feature: Collapse
             | hi    | primary | yes    | to_bridge   |
 
         When I route I should get
-            | waypoints | route                             | turns                   |
-            | a,f       | to_bridge,target_road,target_road | depart,turn left,arrive |
+            | waypoints | route                             | turns                           |
+            | a,f       | to_bridge,target_road,target_road | depart,new name straight,arrive |
 
     Scenario: Pankenbruecke
         Given the node map

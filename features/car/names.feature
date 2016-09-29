@@ -91,5 +91,5 @@ Feature: Car - Street names in instructions
             | restriction | abc      | cde    | c        | no_right_turn |
 
        When I route I should get
-            | waypoints | route                | turns                    | pronunciations        |
-            | a,e       | road,trunk,trunk     | depart,turn right,arrive | roooaad,truank,truank |
+            | waypoints | route             | turns                                                | pronunciations         |
+            | a,e       | road,,trunk,trunk | depart,on ramp slight right,merge slight left,arrive | roooaad,,truank,truank |

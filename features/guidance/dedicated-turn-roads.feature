@@ -28,9 +28,9 @@ Feature: Slipways and Dedicated Turn Lanes
             | restriction | abcd     | ecfg   | c        | no_right_turn |
 
        When I route I should get
-            | waypoints | route               | turns                           |
-            | a,g       | first,second,second | depart,turn right,arrive        |
-            | a,1       | first,,             | depart,turn slight right,arrive |
+            | waypoints | route                | turns                                             |
+            | a,g       | first,,second,second | depart,off ramp slight right,turn straight,arrive |
+            | a,1       | first,,              | depart,off ramp slight right,arrive               |
 
     Scenario: Turn Instead of Ramp
         Given the node map
@@ -80,8 +80,8 @@ Feature: Slipways and Dedicated Turn Lanes
             | restriction | abc      | cde    | c        | no_right_turn |
 
        When I route I should get
-            | waypoints | route                | turns                    |
-            | a,e       | road,trunk,trunk     | depart,turn right,arrive |
+            | waypoints | route             | turns                                                |
+            | a,e       | road,,trunk,trunk | depart,on ramp slight right,merge slight left,arrive |
 
 
     Scenario: Slipway Round U-Turn
@@ -165,8 +165,8 @@ Feature: Slipways and Dedicated Turn Lanes
             | qe    | secondary_link | Ettlinger Allee    |      | yes    |
 
         When I route I should get
-            | waypoints | route                                                    | turns                    | ref        |
-            | a,o       | Schwarzwaldstrasse,Ettlinger Allee,Ettlinger Allee       | depart,turn right,arrive | L561,,     |
+            | waypoints | route                                               | turns                                              | ref         |
+            | a,o       | Schwarzwaldstrasse,,Ettlinger Allee,Ettlinger Allee | depart,continue right,new name slight right,arrive | L561,L561,, |
 
     Scenario: Traffic Lights everywhere
         #http://map.project-osrm.org/?z=18&center=48.995336%2C8.383813&loc=48.995467%2C8.384548&loc=48.995115%2C8.382761&hl=en&alt=0
@@ -194,11 +194,11 @@ Feature: Slipways and Dedicated Turn Lanes
             | jcghf  | primary        | Brauerstrasse | yes    |
 
         When I route I should get
-            | waypoints | route                                    | turns                           |
-            | a,i       | Ebertstrasse,Ebertstrasse                | depart,arrive                   |
-            | a,l       | Ebertstrasse,Ebertstrasse                | depart,arrive                   |
-            | a,f       | Ebertstrasse,Brauerstrasse,Brauerstrasse | depart,turn right,arrive        |
-            | a,1       | Ebertstrasse,,                           | depart,turn slight right,arrive |
+            | waypoints | route                                     | turns                                             |
+            | a,i       | Ebertstrasse,Ebertstrasse                 | depart,arrive                                     |
+            | a,l       | Ebertstrasse,Ebertstrasse                 | depart,arrive                                     |
+            | a,f       | Ebertstrasse,,Brauerstrasse,Brauerstrasse | depart,continue slight right,turn straight,arrive |
+            | a,1       | Ebertstrasse,,                            | depart,continue slight right,arrive               |
 
     #2839
     Scenario: Self-Loop
