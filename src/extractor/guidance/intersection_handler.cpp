@@ -551,7 +551,6 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
 
     if (check_non_continue)
     {
-        std::cout << "Checking non-continue" << std::endl;
         // Find left/right deviation
         const double left_deviation = angularDeviation(
             intersection[(best + 1) % intersection.size()].turn.angle, STRAIGHT_ANGLE);
@@ -603,8 +602,6 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
                                 .road_classification.GetPriority())
                            ? 0.8 * DISTINCTION_RATIO
                            : DISTINCTION_RATIO);
-            std::cout << "Best: " << best_deviation << " " << deviation
-                      << " Ratio: " << adjusted_distinction_ratio << std::endl;
             return index == 0 || deviation / best_deviation >= adjusted_distinction_ratio ||
                    (deviation > best_deviation &&
                     (!intersection[index].entry_allowed && in_data.distance > 30));
@@ -619,7 +616,6 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
     }
     else
     {
-        std::cout << "Checking continue" << std::endl;
         const double deviation =
             angularDeviation(intersection[best_continue].turn.angle, STRAIGHT_ANGLE);
         const auto &continue_data =
