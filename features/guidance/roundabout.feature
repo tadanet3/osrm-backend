@@ -246,19 +246,19 @@ Feature: Basic Roundabout
         Given the node map
             """
                     l       a   i
-                     .    .     .
-                       . .     .
-                    . . b     .
-                  c       .   .
-               . . .       . .
-             .   . .        h
-            n   .  .       .  .
-              . .   .      .   .
-                d   .     .     j
-                .   .     .
-                .   m . . g
-                .       .
-                .     .
+
+
+                        b
+                  c
+
+                            h
+            n
+
+                d               j
+
+                    m     g
+
+
                 e   f
             """
 
@@ -287,12 +287,12 @@ Feature: Basic Roundabout
             """
                     o                       n
                     e                       j
-                  .   .                   .  .
-                 .      q .              .     .
-            a . b       .   s . f . . . g . . . i . k
-                 .      r '     .         .   p.
-                   .    .       t          . .
-                    c . d                   h
+
+                        q
+            a   b           s   f       g       i   k
+                        r                     p
+                                t
+                    c   d                   h
                     l                       m
             """
 

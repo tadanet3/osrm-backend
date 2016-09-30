@@ -3,10 +3,12 @@ Feature: Traffic - turn penalties applied to turn onto which a phantom node snap
 
     Background: Simple map with phantom nodes
         Given the node map
-            |   | 1  |   | 2 |   | 3 |   |
-            | a |    | b |   | c |   | d |
-            |   |    |   |   |   |   |   |
-            |   |    | e |   | f |   | g |
+            """
+              1   2   3
+            a   b   c   d
+
+                e   f   g
+            """
 
         And the nodes
             | node | id |

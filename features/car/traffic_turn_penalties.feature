@@ -3,11 +3,13 @@ Feature: Traffic - turn penalties
 
     Background: Evenly spaced grid with multiple intersections
         Given the node map
-            |   | a |   | b |   |
-            | c | d | e | f | g |
-            |   | h |   | i |   |
-            | j | k | l | m | n |
-            |   | o |   | p |   |
+            """
+              a   b
+            c d e f g
+              h   i
+            j k l m n
+              o   p
+            """
 
         And the nodes
             | node | id |

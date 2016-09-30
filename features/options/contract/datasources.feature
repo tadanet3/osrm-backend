@@ -7,7 +7,9 @@ Feature: osrm-contract command line options: datasources
         Given the profile "testbot"
         Given the extract extra arguments "--generate-edge-lookup"
         And the node map
-            | a | b |
+            """
+            a b
+            """
         And the ways
             | nodes |
             | ab    |
