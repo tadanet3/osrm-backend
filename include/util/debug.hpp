@@ -10,12 +10,34 @@
 
 #include <iomanip>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace osrm
 {
 namespace util
 {
+
+inline std::string toMultiPoint(const std::vector<util::Coordinate> &coordinates,
+                                const std::string size = "small",
+                                const std::string color = "#555555")
+{
+    if (coordinates.empty())
+        return "";
+    std::ostringstream oss;
+    oss << "\"type\": \"Feature\",\"properties\": {\"marker-color\": \"" << color
+        << "\",\n\"marker-size\": \"" << size << "\"},"
+        << "\"geometry\": {\n\"type\": \"MultiPoint\",\"coordinates\":[";
+    oss << std::setprecision(12) << "[" << toFloating(coordinates.front().lon) << ","
+        << toFloating(coordinates.front().lat) << "]";
+    for (std::size_t i = 1; i < coordinates.size(); ++i)
+        oss << std::setprecision(12) << ",[" << toFloating(coordinates[i].lon) << ","
+            << toFloating(coordinates[i].lat) << "]";
+    oss << "]}";
+    return oss.str();
+}
+
 namespace guidance
 {
 inline void print(const engine::guidance::RouteStep &step)

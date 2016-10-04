@@ -1,3 +1,5 @@
+#include "util/debug.hpp"
+
 #include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/coordinate_extractor.hpp"
 #include "extractor/guidance/toolkit.hpp"
@@ -9,8 +11,6 @@
 #include <limits>
 #include <numeric>
 #include <utility>
-
-#include <set> //TODO remove
 
 namespace osrm
 {
@@ -485,14 +485,14 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
             (std::max(intersection_lanes, (std::uint8_t)2)) * 0.5 * ASSUMED_LANE_WIDTH;
 
         // distance has to be long enough to even check
-        if (total_distance < 3 * maximal_lane_offset)
+        if (total_distance < std::max(3 * maximal_lane_offset, LOOKAHEAD_DISTANCE_WITHOUT_LANES))
             return coordinates.size();
 
         const auto offset_index = [segment_distances,
                                    intersection_lanes,
                                    maximal_lane_offset,
                                    straight_distance,
-                                   turn_angles]() {
+                                   coordinates]() {
             double total_segment_length = 0;
             // we allow crossing an additional lane in distance for the turn to be modelled
             const auto curved_offset_distance = 1.5 * (maximal_lane_offset + ASSUMED_LANE_WIDTH);
@@ -512,7 +512,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                 else
                     return i;
             }
-            return segment_distances.size();
+            return coordinates.size();
         }();
 
         // at least two coordinates left and passed at least two coordinates
@@ -538,10 +538,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                       coordinates[curved_offset_index + 1]);
     }
 
-    // Unhandled situations
-    {
-        // printStatus();
-    }
     ++(*times_failed);
     return TrimCoordinatesToLength(std::move(coordinates), 10.0).back();
 }

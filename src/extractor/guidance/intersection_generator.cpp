@@ -1,4 +1,5 @@
 #include <iomanip> // TODO REMOVE
+#include "util/debug.hpp"
 
 #include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/intersection_generator.hpp"
@@ -186,11 +187,19 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
             {
                 if (cases.count(turn_coordinate) == 0)
                 {
-                    std::cout << "Changed Angle from " << compare_angle << " to " << angle
-                              << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
-                              << " " << toFloating(turn_coordinate.lon)
-                              << " Turning onto: " << toFloating(third_coordinate.lat) << " "
-                              << toFloating(third_coordinate.lon) << std::endl;
+                    std::cout << "Changed Angles: " << compare_angle << " " << angle << std::endl;
+                    const auto in_coordinates = coordinate_extractor.GetCoordinatesAlongRoad(
+                                from_node, via_eid, INVERT, turn_node);
+                    const auto out_coordinates = coordinate_extractor.GetCoordinatesAlongRoad(
+                                    turn_node, onto_edge, !INVERT, to_node);
+                    std::cout << "{" << util::toMultiPoint(in_coordinates,"small","#00bbbb") << "}," << std::endl;
+                    std::cout << "{" << util::toMultiPoint(out_coordinates,"small","#006600") << "}," << std::endl;
+
+                    std::vector<util::Coordinate> turn_coordinates;
+                    turn_coordinates.push_back(first_coordinate);
+                    turn_coordinates.push_back(turn_coordinate);
+                    turn_coordinates.push_back(third_coordinate);
+                    std::cout << "{" << util::toMultiPoint(turn_coordinates,"medium","#000077") << "}" << std::endl;
 
                     // print = true;
                     cases.insert(turn_coordinate);
