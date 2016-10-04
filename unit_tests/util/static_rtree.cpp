@@ -25,6 +25,8 @@
 #include <utility>
 #include <vector>
 
+#include <tbb/task_scheduler_init.h>
+
 BOOST_AUTO_TEST_SUITE(static_rtree)
 
 using namespace osrm;
@@ -248,6 +250,8 @@ void build_rtree(const std::string &prefix,
                  std::string &leaves_path,
                  std::string &nodes_path)
 {
+    tbb::task_scheduler_init init(2);
+
     nodes_path = prefix + ".ramIndex";
     leaves_path = prefix + ".fileIndex";
 
