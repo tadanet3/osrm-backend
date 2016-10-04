@@ -188,7 +188,9 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                 {
                     std::cout << "Changed Angle from " << compare_angle << " to " << angle
                               << " at: " << std::setprecision(12) << toFloating(turn_coordinate.lat)
-                              << " " << toFloating(turn_coordinate.lon) << std::endl;
+                              << " " << toFloating(turn_coordinate.lon)
+                              << " Turning onto: " << toFloating(third_coordinate.lat) << " "
+                              << toFloating(third_coordinate.lon) << std::endl;
 
                     // print = true;
                     cases.insert(turn_coordinate);

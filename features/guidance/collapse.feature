@@ -836,8 +836,8 @@ Feature: Collapse
             | ej    | primary |       | off   | yes    |
 
         When I route I should get
-            | waypoints | route                            | turns                                                                                                     |
-            | k,j       | on,ferry,road,road,ferry,off,off | depart,notification sraight,notification sraight,continue uturn,turn straight,notification sraight,arrive |
+            | waypoints | route                            | turns                                                                                                        |
+            | k,j       | on,ferry,road,road,ferry,off,off | depart,notification straight,notification straight,continue uturn,turn straight,notification straight,arrive |
 
     #http://www.openstreetmap.org/#map=19/52.48778/13.30024
     Scenario: Hohenzollerdammbrücke
