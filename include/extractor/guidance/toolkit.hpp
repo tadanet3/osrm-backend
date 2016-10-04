@@ -285,6 +285,53 @@ inline std::string applyAccessTokens(std::string lane_string, const std::string 
     return result_string;
 }
 
+inline std::vector<TurnLaneType::Mask>
+lanesToTheLeft(const util::guidance::LaneTuple lanes,
+               extractor::guidance::TurnLaneDescription lane_description)
+{
+    std::vector<TurnLaneType::Mask> lanes_to_the_left;
+    const auto first_left_of_turn_lanes = lanes.first_lane_from_the_right + lanes.lanes_in_turn;
+    if (first_left_of_turn_lanes < boost::numeric_cast<int>(lane_description.size()))
+    {
+        for (auto laneIt = lane_description.rbegin() + first_left_of_turn_lanes,
+                  end = lane_description.rend();
+             laneIt != end;
+             ++laneIt)
+        {
+            lanes_to_the_left.push_back(*laneIt);
+        }
+        return lanes_to_the_left;
+    }
+    else
+    {
+        return lanes_to_the_left;
+    }
+}
+
+inline std::vector<TurnLaneType::Mask>
+lanesToTheRight(const util::guidance::LaneTuple lanes,
+                extractor::guidance::TurnLaneDescription lane_description)
+{
+    std::vector<TurnLaneType::Mask> lanes_to_the_right;
+    if (lanes.first_lane_from_the_right > 0)
+    {
+        const auto first_right_of_turn_lanes =
+            lanes.first_lane_from_the_right + (lanes.lanes_in_turn - 1);
+        for (auto laneIt = lane_description.rbegin() + first_right_of_turn_lanes,
+                  end = lane_description.rend();
+             laneIt != end;
+             ++laneIt)
+        {
+            lanes_to_the_right.push_back(*laneIt);
+        }
+        return lanes_to_the_right;
+    }
+    else
+    {
+        return lanes_to_the_right;
+    }
+}
+
 } // namespace guidance
 } // namespace extractor
 } // namespace osrm
