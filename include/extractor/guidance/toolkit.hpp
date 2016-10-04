@@ -35,8 +35,8 @@ namespace extractor
 namespace guidance
 {
 
-using util::guidance::LaneTupelIdPair;
-using LaneDataIdMap = std::unordered_map<LaneTupelIdPair, LaneDataID, boost::hash<LaneTupelIdPair>>;
+using util::guidance::LaneTupleIdPair;
+using LaneDataIdMap = std::unordered_map<LaneTupleIdPair, LaneDataID, boost::hash<LaneTupleIdPair>>;
 
 using util::guidance::angularDeviation;
 using util::guidance::entersRoundabout;

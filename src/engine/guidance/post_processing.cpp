@@ -1035,7 +1035,7 @@ void trimShortSegments(std::vector<RouteStep> &steps, LegGeometry &geometry)
             designated_depart.maneuver.instruction = TurnInstruction::NO_TURN();
             // we need to make this conform with the intersection format for the first intersection
             auto &first_intersection = designated_depart.intersections.front();
-            designated_depart.intersections.front().lanes = util::guidance::LaneTupel();
+            designated_depart.intersections.front().lanes = util::guidance::LaneTuple();
             designated_depart.intersections.front().lane_description.clear();
             first_intersection.bearings = {first_intersection.bearings[first_intersection.out]};
             first_intersection.entry = {true};
@@ -1105,7 +1105,7 @@ void trimShortSegments(std::vector<RouteStep> &steps, LegGeometry &geometry)
         next_to_last_step.maneuver.waypoint_type = WaypointType::Arrive;
         next_to_last_step.maneuver.instruction = TurnInstruction::NO_TURN();
         next_to_last_step.maneuver.bearing_after = 0;
-        next_to_last_step.intersections.front().lanes = util::guidance::LaneTupel();
+        next_to_last_step.intersections.front().lanes = util::guidance::LaneTuple();
         next_to_last_step.intersections.front().lane_description.clear();
         next_to_last_step.geometry_end = next_to_last_step.geometry_begin + 1;
         BOOST_ASSERT(next_to_last_step.intersections.size() == 1);
@@ -1294,8 +1294,8 @@ std::vector<RouteStep> collapseUseLane(std::vector<RouteStep> steps)
         return index;
     };
 
-    const auto canCollapeUseLane =
-        [containsTag](const util::guidance::LaneTupel lanes,
+    const auto canCollapseUseLane =
+        [containsTag](const util::guidance::LaneTuple lanes,
                       extractor::guidance::TurnLaneDescription lane_description) {
             // the lane description is given left to right, lanes are counted from the right.
             // Therefore we access the lane description using the reverse iterator
@@ -1319,7 +1319,7 @@ std::vector<RouteStep> collapseUseLane(std::vector<RouteStep> steps)
     {
         const auto &step = steps[step_index];
         if (step.maneuver.instruction.type == TurnType::UseLane &&
-            canCollapeUseLane(step.intersections.front().lanes,
+            canCollapseUseLane(step.intersections.front().lanes,
                               step.intersections.front().lane_description))
         {
             const auto previous = getPreviousIndex(step_index);
