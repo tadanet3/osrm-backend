@@ -670,10 +670,12 @@ CoordinateExtractor::GetCorrectedCoordinate(const util::Coordinate &fixpoint,
     }
 };
 
-std::vector<util::Coordinate> CoordinateExtractor::SampleCoordinates(
-    const std::vector<util::Coordinate> &coordinates, const double length, const double rate) const
+std::vector<util::Coordinate>
+CoordinateExtractor::SampleCoordinates(const std::vector<util::Coordinate> &coordinates,
+                                       const double max_sample_length,
+                                       const double rate) const
 {
-    BOOST_ASSERT(rate > 0 && coordinates.size() > 2);
+    BOOST_ASSERT(rate > 0 && coordinates.size() >= 2);
 
     // the return value
     std::vector<util::Coordinate> sampled_coordinates;
@@ -682,9 +684,49 @@ std::vector<util::Coordinate> CoordinateExtractor::SampleCoordinates(
     sampled_coordinates.push_back(coordinates.front());
 
     // interpolate coordinates as long as we are not past the desired length
-    std::size_t current_coordinate = 1;
-    for (double current_length = 0, current_length < length; current_length += rate)
+    auto previous_coordinate = coordinates.begin();
+    auto current_coordinate = std::next(previous_coordinate);
+    for (double current_length = 0., total_length = 0.;
+         total_length < max_sample_length && current_coordinate != coordinates.end();
+         previous_coordinate = current_coordinate,
+                current_coordinate = std::next(current_coordinate))
     {
+        BOOST_ASSERT(current_length < rate);
+        const auto distance_between = util::coordinate_calculation::haversineDistance(
+            *previous_coordinate, *current_coordinate);
+        if (current_length + distance_between >= rate)
+        {
+            // within the current segment, there is at least a single coordinate that we want to
+            // sample. We extract all coordinates that are on our sampling intervals and update our
+            // local sampling item to reflect the travelled distance
+            const auto base_sampling = rate - current_length;
+
+            // the number of samples in the interval is equal to the length of the interval (+ the
+            // already traversed part from the previous segment) divided by the sampling rate
+            const std::size_t num_samples = std::floor(
+                (std::min(max_sample_length - total_length, distance_between) + base_sampling) /
+                rate);
+
+            for (std::size_t sample_value = 0; sample_value < num_samples; ++sample_value)
+            {
+                const auto interpolation_factor = ComputeInterpolationFactor(
+                    base_sampling + sample_value * rate, 0, distance_between);
+                auto sampled_coordinate = util::coordinate_calculation::interpolateLinear(
+                    interpolation_factor, *previous_coordinate, *current_coordinate);
+                sampled_coordinates.emplace_back(sampled_coordinate);
+            }
+
+            // current length needs to reflect how much is missing to the next sample. Here we can
+            // ignore max sample range, because if we reached it, the loop is done anyhow
+            current_length = (distance_between + base_sampling) - (num_samples * rate);
+        }
+        else
+        {
+            // do the necessary bookkeeping and continue
+            current_length += distance_between;
+        }
+        // the total length travelled is always updated by the full distance
+        total_length += distance_between;
     }
 
     return sampled_coordinates;

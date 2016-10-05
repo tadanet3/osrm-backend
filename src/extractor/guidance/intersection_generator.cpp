@@ -192,6 +192,13 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                                 from_node, via_eid, INVERT, turn_node);
                     const auto out_coordinates = coordinate_extractor.GetCoordinatesAlongRoad(
                                     turn_node, onto_edge, !INVERT, to_node);
+
+                    const auto sampled_in_coordinates = coordinate_extractor.SampleCoordinates(in_coordinates,30,1);
+                    const auto sampled_out_coordinates = coordinate_extractor.SampleCoordinates(out_coordinates,30,1);
+
+                    std::cout << "{" << util::toMultiPoint(sampled_in_coordinates,"small","#002222") << "}," << std::endl;
+                    std::cout << "{" << util::toMultiPoint(sampled_out_coordinates,"small","#001100") << "}," << std::endl;
+
                     std::cout << "{" << util::toMultiPoint(in_coordinates,"small","#00bbbb") << "}," << std::endl;
                     std::cout << "{" << util::toMultiPoint(out_coordinates,"small","#006600") << "}," << std::endl;
 
@@ -199,7 +206,7 @@ Intersection IntersectionGenerator::GetConnectedRoads(const NodeID from_node,
                     turn_coordinates.push_back(first_coordinate);
                     turn_coordinates.push_back(turn_coordinate);
                     turn_coordinates.push_back(third_coordinate);
-                    std::cout << "{" << util::toMultiPoint(turn_coordinates,"medium","#000077") << "}" << std::endl;
+                    std::cout << "{" << util::toMultiPoint(turn_coordinates,"small","#000077") << "}" << std::endl;
 
                     // print = true;
                     cases.insert(turn_coordinate);
