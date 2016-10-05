@@ -31,7 +31,7 @@ const constexpr double LOOKAHEAD_DISTANCE_WITHOUT_LANES = 10.0;
 // smaller widths, ranging from 2.5 to 3.25 meters. As a compromise, we use
 // the 3.25 here for our angle calculations
 const constexpr double ASSUMED_LANE_WIDTH = 3.25;
-const constexpr double FAR_LOOKAHEAD_DISTANCE = 30.0;
+const constexpr double FAR_LOOKAHEAD_DISTANCE = 50.0;
 
 // The count of lanes assumed when no lanes are present. Since most roads will have lanes for both
 // directions or a lane count specified, we use 2. Overestimating only makes our calculations safer,
@@ -126,7 +126,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
      * between `v` and `b`. This calculation trims the coordinates to the ones immediately at the
      * intersection.
      */
-    std::size_t count = coordinates.size();
     coordinates = TrimCoordinatesToLength(std::move(coordinates), FAR_LOOKAHEAD_DISTANCE);
     // If this reduction leaves us with only two coordinates, the turns/angles are represented in a
     // valid way. Only curved roads and other difficult scenarios will require multiple coordinates.
@@ -142,7 +141,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
     {
         // Look ahead a tiny bit. Low priority road classes can be modelled fairly distinct in the
         // very first part of the road
-        coordinates = TrimCoordinatesToLength(std::move(coordinates), 5);
+        coordinates = TrimCoordinatesToLength(std::move(coordinates), 10);
         if (coordinates.size() > 2 &&
             util::coordinate_calculation::haversineDistance(turn_coordinate, coordinates[1]) <
                 ASSUMED_LANE_WIDTH)
@@ -196,58 +195,13 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return coordinates[1];
     }
 
-    /* We use the sum of least squares to calculate a linear regression through our coordinates.
-     * This regression gives a good idea of how the road can be perceived and corrects for initial
-     * and final corrections
-     */
-    const auto regression_vector =
-        [coordinates]() -> std::pair<util::Coordinate, util::Coordinate> {
-        double sum_lon = 0, sum_lat = 0, sum_lon_lat = 0, sum_lon_lon = 0;
-        double min_lon = (double)toFloating(coordinates.front().lon);
-        double max_lon = (double)toFloating(coordinates.front().lon);
-        for (const auto coord : coordinates)
-        {
-            min_lon = std::min(min_lon, (double)toFloating(coord.lon));
-            max_lon = std::max(max_lon, (double)toFloating(coord.lon));
-            sum_lon += (double)toFloating(coord.lon);
-            sum_lon_lon += (double)toFloating(coord.lon) * (double)toFloating(coord.lon);
-            sum_lat += (double)toFloating(coord.lat);
-            sum_lon_lat += (double)toFloating(coord.lon) * (double)toFloating(coord.lat);
-        }
-
-        const auto dividend = coordinates.size() * sum_lon_lat - sum_lon * sum_lat;
-        const auto divisor = coordinates.size() * sum_lon_lon - sum_lon * sum_lon;
-        if (std::abs(divisor) < std::numeric_limits<double>::epsilon())
-            return std::make_pair(coordinates.front(), coordinates.back());
-
-        // slope of the regression line
-        const auto slope = dividend / divisor;
-        const auto intercept = (sum_lat - slope * sum_lon) / coordinates.size();
-
-        const auto GetLatatLon =
-            [intercept, slope](const util::FloatLongitude longitude) -> util::FloatLatitude {
-            return {intercept + slope * (double)(longitude)};
-        };
-
-        const util::Coordinate regression_first = {
-            toFixed(util::FloatLongitude{min_lon - 1}),
-            toFixed(util::FloatLatitude(GetLatatLon(util::FloatLongitude{min_lon - 1})))};
-        const util::Coordinate regression_end = {
-            toFixed(util::FloatLongitude{max_lon + 1}),
-            toFixed(util::FloatLatitude(GetLatatLon(util::FloatLongitude{max_lon + 1})))};
-
-        return {regression_first, regression_end};
-    }();
-
     const double max_deviation_from_straight = GetMaxDeviation(
         coordinates.begin(), coordinates.end(), coordinates.front(), coordinates.back());
 
     // if the deviation from a straight line is small, we can savely use the coordinate. We use half
     // a lane as heuristic to determine if the road is straight enough.
     if (max_deviation_from_straight < 0.5 * ASSUMED_LANE_WIDTH)
-    {
         return coordinates.back();
-    }
 
     /*
      * if a road turns barely in the beginning, it is similar to the first coordinate being
@@ -284,6 +238,9 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return TrimCoordinatesToLength(std::move(coordinates), 5).back();
     }
 
+    // compute the regression vector based on the sum of least squares
+    const auto regression_line = RegressionLine(coordinates);
+
     /*
      * If we can find a line that represents the full set of coordinates within a certain range in
      * relation to ASSUMED_LANE_WIDTH, we use the regression line to express the turn angle.
@@ -295,30 +252,25 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
      * a                          a
      */
     const double max_deviation_from_regression = GetMaxDeviation(
-        coordinates.begin(), coordinates.end(), regression_vector.first, regression_vector.second);
+        coordinates.begin(), coordinates.end(), regression_line.first, regression_line.second);
     if (max_deviation_from_regression < 0.35 * ASSUMED_LANE_WIDTH)
     {
-        // Since the overall turn in the road isn't bad, we choose between the first coordinate or a
-        // coordinate based on the regression line. If the initial coordinate is somewhat far away,
-        // we use it
-        if (straight_distance > 0.5 * ASSUMED_LANE_WIDTH)
-        {
-            return TrimCoordinatesToLength(std::move(coordinates), 5).back();
-        }
-        else
-        {
-            // We use the locations on the regression line to offset the regression line onto the
-            // intersection.
-            const auto coord_between_front =
-                util::coordinate_calculation::projectPointOnSegment(
-                    regression_vector.first, regression_vector.second, coordinates.front())
-                    .second;
-            const auto coord_between_back =
-                util::coordinate_calculation::projectPointOnSegment(
-                    regression_vector.first, regression_vector.second, coordinates.back())
-                    .second;
-            return GetCorrectedCoordinate(turn_coordinate, coord_between_front, coord_between_back);
-        }
+        // We use the locations on the regression line to offset the regression line onto the
+        // intersection.
+        const auto coord_between_front =
+            util::coordinate_calculation::projectPointOnSegment(
+                regression_line.first, regression_line.second, coordinates.front())
+                .second;
+        const auto coord_between_back =
+            util::coordinate_calculation::projectPointOnSegment(
+                regression_line.first, regression_line.second, coordinates.back())
+                .second;
+        return GetCorrectedCoordinate(turn_coordinate, coord_between_front, coord_between_back);
+    }
+
+    if (std::abs(segment_distances[1] - ASSUMED_LANE_WIDTH) < 0.5 * ASSUMED_LANE_WIDTH)
+    {
+
     }
 
     BOOST_ASSERT(coordinates.size() >= 3);
@@ -334,6 +286,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return turn_angles;
     }();
 
+#if 0
     const auto printStatus = [&]() {
         const util::Coordinate destination_coordinate =
             node_coordinates[traversed_in_reverse ? intersection_node : to_node];
@@ -344,10 +297,10 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                   << " " << toFloating(coordinates.back().lon)
                   << " Regression: " << toFloating(destination_coordinate.lat) << " "
                   << toFloating(destination_coordinate.lon)
-                  << " Regression: " << toFloating(regression_vector.first.lat) << " "
-                  << toFloating(regression_vector.first.lon) << " - "
-                  << toFloating(regression_vector.second.lat) << " "
-                  << toFloating(regression_vector.second.lon) << ":\n\t" << std::setprecision(5);
+                  << " Regression: " << toFloating(regression_line.first.lat) << " "
+                  << toFloating(regression_line.first.lon) << " - "
+                  << toFloating(regression_line.second.lat) << " "
+                  << toFloating(regression_line.second.lon) << ":\n\t" << std::setprecision(5);
         std::cout << "Stats: Turn Angles:";
         for (auto angle : turn_angles)
             std::cout << " " << (int)angle;
@@ -359,7 +312,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
             std::cout << " " << distance;
             auto coord_between =
                 util::coordinate_calculation::projectPointOnSegment(
-                    regression_vector.first, regression_vector.second, coordinates[i])
+                    regression_line.first, regression_line.second, coordinates[i])
                     .second;
             std::cout << " (" << util::coordinate_calculation::haversineDistance(coord_between,
                                                                                  coordinates[i])
@@ -367,6 +320,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         }
         std::cout << std::endl;
     };
+#endif
 
     /*
      * If the very first coordinate is within lane offsets and the rest offers a near straight line,
@@ -478,6 +432,7 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return GetCorrectedCoordinate(turn_coordinate, coordinates.back(), vector_head);
     }
 
+#if 0
     // offsets can occur in curved turns as well, though here we have to offset at a coordinate down
     // the road, index will be equal to coordinates.size() if the turn is not passing the test
     const std::size_t curved_offset_index = [&]() {
@@ -537,9 +492,10 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
                                       coordinates[curved_offset_index],
                                       coordinates[curved_offset_index + 1]);
     }
-
-    ++(*times_failed);
-    return TrimCoordinatesToLength(std::move(coordinates), 10.0).back();
+#endif
+    // We use the locations on the regression line to offset the regression line onto the
+    // intersection.
+    return TrimCoordinatesToLength(coordinates, LOOKAHEAD_DISTANCE_WITHOUT_LANES).back();
 }
 
 std::vector<util::Coordinate>
@@ -703,8 +659,9 @@ CoordinateExtractor::SampleCoordinates(const std::vector<util::Coordinate> &coor
 
             // the number of samples in the interval is equal to the length of the interval (+ the
             // already traversed part from the previous segment) divided by the sampling rate
+            BOOST_ASSERT(max_sample_length > total_length);
             const std::size_t num_samples = std::floor(
-                (std::min(max_sample_length - total_length, distance_between) + base_sampling) /
+                (std::min(max_sample_length - total_length, distance_between) + current_length) /
                 rate);
 
             for (std::size_t sample_value = 0; sample_value < num_samples; ++sample_value)
@@ -718,7 +675,7 @@ CoordinateExtractor::SampleCoordinates(const std::vector<util::Coordinate> &coor
 
             // current length needs to reflect how much is missing to the next sample. Here we can
             // ignore max sample range, because if we reached it, the loop is done anyhow
-            current_length = (distance_between + base_sampling) - (num_samples * rate);
+            current_length = (distance_between + current_length) - (num_samples * rate);
         }
         else
         {
@@ -742,6 +699,70 @@ double CoordinateExtractor::ComputeInterpolationFactor(const double desired_dist
     BOOST_ASSERT(distance_to_second >= desired_distance);
     double missing_distance = desired_distance - distance_to_first;
     return std::max(0., std::min(missing_distance / segment_length, 1.0));
+}
+
+std::pair<util::Coordinate, util::Coordinate>
+CoordinateExtractor::RegressionLine(const std::vector<util::Coordinate> &coordinates) const
+{
+    // create a sample of all coordinates to improve the quality of our regression vector
+    // (less dependent on modelling of the data in OSM)
+    const auto sampled_coordinates = SampleCoordinates(coordinates, FAR_LOOKAHEAD_DISTANCE, 1);
+
+    /* We use the sum of least squares to calculate a linear regression through our coordinates.
+     * This regression gives a good idea of how the road can be perceived and corrects for initial
+     * and final corrections
+     */
+    const auto least_square_regression = [](const std::vector<util::Coordinate> &coordinates)
+        -> std::pair<util::Coordinate, util::Coordinate> {
+            double sum_lon = 0, sum_lat = 0, sum_lon_lat = 0, sum_lon_lon = 0;
+            double min_lon = (double)toFloating(coordinates.front().lon);
+            double max_lon = (double)toFloating(coordinates.front().lon);
+            for (const auto coord : coordinates)
+            {
+                min_lon = std::min(min_lon, (double)toFloating(coord.lon));
+                max_lon = std::max(max_lon, (double)toFloating(coord.lon));
+                sum_lon += (double)toFloating(coord.lon);
+                sum_lon_lon += (double)toFloating(coord.lon) * (double)toFloating(coord.lon);
+                sum_lat += (double)toFloating(coord.lat);
+                sum_lon_lat += (double)toFloating(coord.lon) * (double)toFloating(coord.lat);
+            }
+
+            const auto dividend = coordinates.size() * sum_lon_lat - sum_lon * sum_lat;
+            const auto divisor = coordinates.size() * sum_lon_lon - sum_lon * sum_lon;
+            if (std::abs(divisor) < std::numeric_limits<double>::epsilon())
+                return std::make_pair(coordinates.front(), coordinates.back());
+
+            // slope of the regression line
+            const auto slope = dividend / divisor;
+            const auto intercept = (sum_lat - slope * sum_lon) / coordinates.size();
+
+            const auto GetLatatLon =
+                [intercept, slope](const util::FloatLongitude longitude) -> util::FloatLatitude {
+                return {intercept + slope * (double)(longitude)};
+            };
+
+            const util::Coordinate regression_first = {
+                toFixed(util::FloatLongitude{min_lon - 1}),
+                toFixed(util::FloatLatitude(GetLatatLon(util::FloatLongitude{min_lon - 1})))};
+            const util::Coordinate regression_end = {
+                toFixed(util::FloatLongitude{max_lon + 1}),
+                toFixed(util::FloatLatitude(GetLatatLon(util::FloatLongitude{max_lon + 1})))};
+
+            return {regression_first, regression_end};
+        };
+
+    // compute the regression vector based on the sum of least squares
+    const auto regression_line = least_square_regression(sampled_coordinates);
+    const auto coord_between_front =
+        util::coordinate_calculation::projectPointOnSegment(
+            regression_line.first, regression_line.second, coordinates.front())
+            .second;
+    const auto coord_between_back =
+        util::coordinate_calculation::projectPointOnSegment(
+            regression_line.first, regression_line.second, coordinates.back())
+            .second;
+
+    return {coord_between_front, coord_between_back};
 }
 
 } // namespace guidance

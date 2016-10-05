@@ -95,6 +95,9 @@ class CoordinateExtractor
                                       const double distance_to_first,
                                       const double distance_to_second) const;
 
+    std::pair<util::Coordinate, util::Coordinate>
+    RegressionLine(const std::vector<util::Coordinate> &coordinates) const;
+
     std::size_t *times_called;
     std::size_t *times_failed;
 };
