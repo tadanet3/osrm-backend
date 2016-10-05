@@ -2,9 +2,9 @@
 #define ROUTING_BASE_HPP
 
 #include "extractor/guidance/turn_instruction.hpp"
+#include "engine/edge_unpacker.hpp"
 #include "engine/internal_route_result.hpp"
 #include "engine/search_engine_data.hpp"
-#include "engine/edge_unpacker.hpp"
 #include "util/coordinate_calculation.hpp"
 #include "util/typedefs.hpp"
 
@@ -260,7 +260,8 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 std::vector<DatasourceID> datasource_vector;
                 facade->GetUncompressedDatasources(geometry_index, datasource_vector);
 
-                const auto total_weight = std::accumulate(weight_vector.begin(), weight_vector.end(), 0);
+                const auto total_weight =
+                    std::accumulate(weight_vector.begin(), weight_vector.end(), 0);
 
                 BOOST_ASSERT(weight_vector.size() == id_vector.size());
                 const bool is_first_segment = unpacked_path.empty();

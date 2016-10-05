@@ -1,6 +1,6 @@
+#include "engine/plugins/tile.hpp"
 #include "engine/edge_unpacker.hpp"
 #include "engine/plugins/plugin_base.hpp"
-#include "engine/plugins/tile.hpp"
 
 #include "util/coordinate_calculation.hpp"
 #include "util/vector_tile.hpp"
