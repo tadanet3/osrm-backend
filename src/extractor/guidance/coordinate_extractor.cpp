@@ -597,16 +597,6 @@ CoordinateExtractor::TrimCoordinatesToLength(std::vector<util::Coordinate> coord
 {
     double distance_to_current_coordinate = 0;
 
-    const auto getFactor = [desired_length](const double first_distance,
-                                            const double second_distance) {
-        BOOST_ASSERT(first_distance < desired_length);
-        double segment_length = second_distance - first_distance;
-        BOOST_ASSERT(segment_length > 0);
-        BOOST_ASSERT(second_distance >= desired_length);
-        double missing_distance = desired_length - first_distance;
-        return std::max(0., std::min(missing_distance / segment_length, 1.0));
-    };
-
     for (std::size_t coordinate_index = 1; coordinate_index < coordinates.size();
          ++coordinate_index)
     {
@@ -620,7 +610,8 @@ CoordinateExtractor::TrimCoordinatesToLength(std::vector<util::Coordinate> coord
         {
             coordinates.resize(coordinate_index + 1);
             coordinates.back() = util::coordinate_calculation::interpolateLinear(
-                getFactor(distance_to_current_coordinate, distance_to_next_coordinate),
+                ComputeInterpolationFactor(
+                    desired_length, distance_to_current_coordinate, distance_to_next_coordinate),
                 coordinates[coordinate_index - 1],
                 coordinates[coordinate_index]);
             break;
@@ -678,6 +669,38 @@ CoordinateExtractor::GetCorrectedCoordinate(const util::Coordinate &fixpoint,
         return util::Coordinate(corrected_lon, corrected_lat);
     }
 };
+
+std::vector<util::Coordinate> CoordinateExtractor::SampleCoordinates(
+    const std::vector<util::Coordinate> &coordinates, const double length, const double rate) const
+{
+    BOOST_ASSERT(rate > 0 && coordinates.size() > 2);
+
+    // the return value
+    std::vector<util::Coordinate> sampled_coordinates;
+
+    // the very first coordinate is always part of the sample
+    sampled_coordinates.push_back(coordinates.front());
+
+    // interpolate coordinates as long as we are not past the desired length
+    std::size_t current_coordinate = 1;
+    for (double current_length = 0, current_length < length; current_length += rate)
+    {
+    }
+
+    return sampled_coordinates;
+}
+
+double CoordinateExtractor::ComputeInterpolationFactor(const double desired_distance,
+                                                       const double distance_to_first,
+                                                       const double distance_to_second) const
+{
+    BOOST_ASSERT(distance_to_first < desired_distance);
+    double segment_length = distance_to_second - distance_to_first;
+    BOOST_ASSERT(segment_length > 0);
+    BOOST_ASSERT(distance_to_second >= desired_distance);
+    double missing_distance = desired_distance - distance_to_first;
+    return std::max(0., std::min(missing_distance / segment_length, 1.0));
+}
 
 } // namespace guidance
 } // namespace extractor
