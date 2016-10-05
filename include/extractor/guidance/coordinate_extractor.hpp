@@ -48,6 +48,14 @@ class CoordinateExtractor
     std::vector<util::Coordinate> TrimCoordinatesToLength(std::vector<util::Coordinate> coordinates,
                                                           const double desired_length) const;
 
+    /* when looking at a set of coordinates, this function allows trimming the vector to a smaller,
+     * only containing coordinates up to a given distance along the path. The last coordinate might
+     * be interpolated
+     */
+    std::vector<util::Coordinate>
+    TrimCoordinatesByLengthFront(std::vector<util::Coordinate> coordinates,
+                                 const double desired_length) const;
+
     /*
      * to correct for the initial offset, we move the lookahead coordinate close
      * to the original road. We do so by subtracting the difference between the

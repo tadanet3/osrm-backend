@@ -268,10 +268,6 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         return GetCorrectedCoordinate(turn_coordinate, coord_between_front, coord_between_back);
     }
 
-    if (std::abs(segment_distances[1] - ASSUMED_LANE_WIDTH) < 0.5 * ASSUMED_LANE_WIDTH)
-    {
-
-    }
 
     BOOST_ASSERT(coordinates.size() >= 3);
     // Compute all turn angles along the road
@@ -430,6 +426,27 @@ CoordinateExtractor::GetCoordinateAlongRoad(const NodeID intersection_node,
         coordinates = TrimCoordinatesToLength(std::move(coordinates), offset);
         BOOST_ASSERT(coordinates.size() >= 2);
         return GetCorrectedCoordinate(turn_coordinate, coordinates.back(), vector_head);
+    }
+
+    {
+        // skip over the first coordinates
+        const auto trimmed_coordinates = TrimCoordinatesByLengthFront(coordinates, 5);
+        if (trimmed_coordinates.size() > 2)
+        {
+            // get the regression line
+            const auto regression_line_trimmed = RegressionLine(trimmed_coordinates);
+
+            // and compute the maximum deviation from it
+            const auto max_deviation_from_trimmed_regression =
+                GetMaxDeviation(trimmed_coordinates.begin(),
+                                trimmed_coordinates.end(),
+                                regression_line_trimmed.first,
+                                regression_line_trimmed.second);
+
+            if (max_deviation_from_trimmed_regression < 0.5 * ASSUMED_LANE_WIDTH)
+                return GetCorrectedCoordinate(
+                    turn_coordinate, regression_line_trimmed.first, regression_line_trimmed.second);
+        }
     }
 
 #if 0
@@ -701,6 +718,38 @@ double CoordinateExtractor::ComputeInterpolationFactor(const double desired_dist
     return std::max(0., std::min(missing_distance / segment_length, 1.0));
 }
 
+std::vector<util::Coordinate>
+CoordinateExtractor::TrimCoordinatesByLengthFront(std::vector<util::Coordinate> coordinates,
+                                                  const double desired_length) const
+{
+    double distance_to_index = 0;
+    std::size_t index = 0;
+    for (std::size_t next_index = 1; next_index < coordinates.size(); ++next_index)
+    {
+        const double next_distance =
+            distance_to_index + util::coordinate_calculation::haversineDistance(
+                                    coordinates[index], coordinates[next_index]);
+        if (next_distance >= desired_length)
+        {
+            const auto factor =
+                ComputeInterpolationFactor(desired_length, distance_to_index, next_distance);
+            auto interpolated_coordinate = util::coordinate_calculation::interpolateLinear(
+                factor, coordinates[index], coordinates[next_index]);
+            if (index > 0)
+                coordinates.erase(coordinates.begin(), coordinates.begin() + index);
+            coordinates.front() = interpolated_coordinate;
+            return coordinates;
+        }
+
+        distance_to_index = next_distance;
+        index = next_index;
+    }
+
+    // the coordinates in total are too short in length for the desired length
+    coordinates.clear();
+    return coordinates;
+}
+
 std::pair<util::Coordinate, util::Coordinate>
 CoordinateExtractor::RegressionLine(const std::vector<util::Coordinate> &coordinates) const
 {
@@ -708,8 +757,10 @@ CoordinateExtractor::RegressionLine(const std::vector<util::Coordinate> &coordin
     // (less dependent on modelling of the data in OSM)
     const auto sampled_coordinates = SampleCoordinates(coordinates, FAR_LOOKAHEAD_DISTANCE, 1);
 
-    /* We use the sum of least squares to calculate a linear regression through our coordinates.
-     * This regression gives a good idea of how the road can be perceived and corrects for initial
+    /* We use the sum of least squares to calculate a linear regression through our
+     * coordinates.
+     * This regression gives a good idea of how the road can be perceived and corrects for
+     * initial
      * and final corrections
      */
     const auto least_square_regression = [](const std::vector<util::Coordinate> &coordinates)
