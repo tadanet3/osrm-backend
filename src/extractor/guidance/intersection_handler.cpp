@@ -1,5 +1,5 @@
-#include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/intersection_handler.hpp"
+#include "extractor/guidance/constants.hpp"
 #include "extractor/guidance/toolkit.hpp"
 
 #include "util/coordinate_calculation.hpp"
@@ -536,7 +536,7 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
 
         // if the best turn isn't narrow, but there is a nearly straight turn, we don't consider the
         // turn obvious
-        const auto check_narrow = [&intersection,best_deviation](const std::size_t index) {
+        const auto check_narrow = [&intersection, best_deviation](const std::size_t index) {
             return angularDeviation(intersection[index].turn.angle, STRAIGHT_ANGLE) <=
                        FUZZY_ANGLE_DIFFERENCE &&
                    (best_deviation > NARROW_TURN_ANGLE || intersection[index].entry_allowed);
@@ -556,15 +556,20 @@ std::size_t IntersectionHandler::findObviousTurn(const EdgeID via_edge,
                distinction rate. If the road category is smaller, its also adjusted. Only
                roads of the same priority require the full distinction ratio.
              */
-            const auto adjusted_distinction_ratio =
-                (!intersection[index].entry_allowed
-                     ? 0.7 * DISTINCTION_RATIO
-                     : (in_data.road_classification == best_data.road_classification &&
-                        best_data.road_classification.GetPriority() <
-                            node_based_graph.GetEdgeData(intersection[index].turn.eid)
-                                .road_classification.GetPriority())
-                           ? 0.8 * DISTINCTION_RATIO
-                           : DISTINCTION_RATIO);
+            const auto adjusted_distinction_ratio = [&]() {
+                // not allowed competitors are easily distinct
+                if (!intersection[index].entry_allowed)
+                    return 0.7 * DISTINCTION_RATIO;
+                // a bit less obvious are road classes
+                else if (in_data.road_classification == best_data.road_classification &&
+                         best_data.road_classification.GetPriority() <
+                             node_based_graph.GetEdgeData(intersection[index].turn.eid)
+                                 .road_classification.GetPriority())
+                    return 0.8 * DISTINCTION_RATIO;
+                // if road classes are the same, we use the full ratio
+                else
+                    return DISTINCTION_RATIO;
+            }();
             return index == 0 || deviation / best_deviation >= adjusted_distinction_ratio ||
                    (deviation <= NARROW_TURN_ANGLE && !intersection[index].entry_allowed);
         };

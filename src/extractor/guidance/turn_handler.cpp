@@ -521,18 +521,26 @@ std::pair<std::size_t, std::size_t> TurnHandler::findFork(const EdgeID via_edge,
             return true;
         }();
 
-        const bool has_invalid_entry = [&]() {
-            const auto end_itr = intersection.begin() + left + 1;
-            return end_itr !=
-                   std::find_if(intersection.begin() + right,
-                                end_itr,
-                                [](const ConnectedRoad &road) { return !road.entry_allowed; });
+        // check if all entries in the fork range allow entry
+        const bool only_valid_entries = [&]() {
+            BOOST_ASSERT(right <= left && left < intersection.size());
 
+            // one past the end of the fork range
+            const auto end_itr = intersection.begin() + left + 1;
+
+            const auto has_entry_forbidden = [](const ConnectedRoad &road) {
+                return !road.entry_allowed;
+            };
+
+            const auto first_disallowed_entry =
+                std::find_if(intersection.begin() + right, end_itr, has_entry_forbidden);
+            // if no entry was found that forbids entry, the intersection entries are all valid.
+            return first_disallowed_entry == end_itr;
         }();
 
         // TODO check whether 2*NARROW_TURN is too large
         if (valid_indices && separated_at_left_side && separated_at_right_side &&
-            not_more_than_three && !has_obvious && has_compatible_classes && !has_invalid_entry)
+            not_more_than_three && !has_obvious && has_compatible_classes && only_valid_entries)
             return std::make_pair(right, left);
     }
     return std::make_pair(std::size_t{0}, std::size_t{0});
