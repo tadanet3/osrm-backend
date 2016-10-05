@@ -48,7 +48,7 @@ matrix:
         apt:
           sources: ['ubuntu-toolchain-r-test']
           packages: ['libstdc++-5-dev', 'libbz2-dev', 'libstxxl-dev', 'libstxxl1', 'libxml2-dev', 'libzip-dev', 'lua5.1', 'liblua5.1-0-dev', 'libtbb-dev', 'libgdal-dev', 'libluabind-dev', 'libboost-all-dev', 'ccache']
-      env: CLANG_VERSION='3.8.0' BUILD_TYPE='Debug' RUN_CLANG_FORMAT=ON ENABLE_SANITIZER=ON
+      env: CLANG_VERSION='3.8.0' BUILD_TYPE='Debug' RUN_CLANG_FORMAT=ON ENABLE_SANITIZER=ON LSAN_OPTIONS=suppressions=/home/travis/build/Project-OSRM/osrm-backend/.addr_sanitizer_suppression
 
     - os: osx
       osx_image: xcode7.3
