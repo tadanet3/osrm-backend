@@ -44,11 +44,10 @@ inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
     geometry.locations.push_back(source_node.location);
 
     // Need to get the node ID preceding the source phantom node
-    // TODO: check if this was traversed in reverse?
-    const std::vector<NodeID> reverse_geometry =
-        facade.GetUncompressedReverseGeometry(source_node.packed_geometry_id);
+    const std::vector<NodeID> forward_geometry =
+        facade.GetUncompressedForwardGeometry(target_node.packed_geometry_id);
     geometry.osm_node_ids.push_back(facade.GetOSMNodeIDOfNode(
-        reverse_geometry[reverse_geometry.size() - source_node.fwd_segment_position - 1]));
+        forward_geometry[source_node.fwd_segment_position]));
 
     auto cumulative_distance = 0.;
     auto current_distance = 0.;
@@ -91,11 +90,8 @@ inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
     geometry.locations.push_back(target_node.location);
 
     // Need to get the node ID following the destination phantom node
-    // TODO: check if this was traversed in reverse??
-    const std::vector<NodeID> forward_geometry =
-        facade.GetUncompressedForwardGeometry(target_node.packed_geometry_id);
     geometry.osm_node_ids.push_back(
-        facade.GetOSMNodeIDOfNode(forward_geometry[target_node.fwd_segment_position]));
+        facade.GetOSMNodeIDOfNode(forward_geometry[target_node.fwd_segment_position + 1]));
 
     BOOST_ASSERT(geometry.segment_distances.size() == geometry.segment_offsets.size() - 1);
     BOOST_ASSERT(geometry.locations.size() > geometry.segment_distances.size());

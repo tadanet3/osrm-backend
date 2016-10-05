@@ -272,7 +272,6 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
 
                 const auto total_weight = std::accumulate(weight_vector.begin(), weight_vector.end(), 0);
 
-                BOOST_ASSERT(weight_vector.size() == id_vector.size());
                 const bool is_first_segment = unpacked_path.empty();
 
                 const std::size_t start_index =
@@ -289,7 +288,7 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
                 for (std::size_t i = start_index; i < end_index; ++i)
                 {
                     unpacked_path.push_back(
-                        PathData{id_vector[i],
+                        PathData{id_vector[i + 1],
                                  name_index,
                                  weight_vector[i],
                                  extractor::guidance::TurnInstruction::NO_TURN(),
@@ -360,10 +359,10 @@ template <class DataFacadeT, class Derived> class BasicRoutingInterface
         // note that (x, t) is _not_ included but needs to be added later.
         for (std::size_t i = start_index; i != end_index; (start_index < end_index ? ++i : --i))
         {
-            BOOST_ASSERT(i < id_vector.size());
+            BOOST_ASSERT(i < id_vector.size() - 1);
             BOOST_ASSERT(phantom_node_pair.target_phantom.forward_travel_mode > 0);
             unpacked_path.push_back(PathData{
-                id_vector[i],
+                id_vector[i + 1],
                 phantom_node_pair.target_phantom.name_id,
                 weight_vector[i],
                 extractor::guidance::TurnInstruction::NO_TURN(),

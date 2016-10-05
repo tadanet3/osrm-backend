@@ -537,7 +537,7 @@ class SharedDataFacade final : public BaseDataFacade
          * forward geometries of bi-directional edges, edges 2 to
          * n of that edge need to be read.
          */
-        const unsigned begin = m_geometry_indices.at(id) + 1;
+        const unsigned begin = m_geometry_indices.at(id);
         const unsigned end = m_geometry_indices.at(id + 1);
 
         std::vector<NodeID> result_nodes;
@@ -565,7 +565,7 @@ class SharedDataFacade final : public BaseDataFacade
          * n-1 of that edge need to be read in reverse.
          */
         const signed begin = m_geometry_indices.at(id);
-        const signed end = m_geometry_indices.at(id + 1) - 1;
+        const signed end = m_geometry_indices.at(id + 1);
 
         std::vector<NodeID> result_nodes;
 

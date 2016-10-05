@@ -460,7 +460,7 @@ Status TilePlugin::HandleRequest(const api::TileParameters &parameters, std::str
 
         // Now, for every edge-based-node that we discovered (edge-based-nodes are sources
         // and targets of turns).  EBN is short for edge-based-node
-        std::vector<NodeID> first_geometry, second_geometry;
+        std::vector<NodeID> first_geometry;
         std::vector<contractor::QueryEdge::EdgeData> unpacked_shortcut;
         std::vector<EdgeWeight> forward_weight_vector;
         for (const auto &source_ebn : edge_based_node_info)
@@ -524,12 +524,6 @@ Status TilePlugin::HandleRequest(const api::TileParameters &parameters, std::str
                         }();
                     BOOST_ASSERT_MSG(!data.shortcut, "Connecting edge must not be a shortcut");
 
-                    // This is the geometry leading away from the intersection
-                    // (i.e. the geometry of the target edge-based-node)
-                    second_geometry.clear();
-                    second_geometry = facade.GetUncompressedReverseGeometry(
-                        edge_based_node_info.at(target_ebn).packed_geometry_id);
-
                     // Now, calculate the sum of the weight of all the segments.
                     forward_weight_vector.clear();
                     forward_weight_vector = facade.GetUncompressedForwardWeights(source_ebn.second.packed_geometry_id);
@@ -549,7 +543,7 @@ Status TilePlugin::HandleRequest(const api::TileParameters &parameters, std::str
                                                ? *(first_geometry.end() - 2)
                                                : source_ebn.second.source_intersection;
                     const auto node_via = source_ebn.second.target_intersection;
-                    const auto node_to = second_geometry.front();
+                    const auto node_to = first_geometry.back();
 
                     const auto coord_from = facade.GetCoordinateOfNode(node_from);
                     const auto coord_via = facade.GetCoordinateOfNode(node_via);
